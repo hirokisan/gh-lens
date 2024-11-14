@@ -1,8 +1,16 @@
 [package]
 name = "gh-lens"
-description = "todo"
-version = "0.0.1"
+description = "CLI to analyze your activity on GitHub"
+version = "0.0.2"
 edition = "2021"
 license = "MIT"
 
 [dependencies]
+anyhow = "1.0.93"
+chrono = "0.4.38"
+clap = { version = "4.5.21", features = ["derive"] }
+graphql_client = "0.14.0"
+octocrab = "0.41.2"
+serde = { version = "1.0.215", features = ["derive"] }
+serde_json = "1.0.133"
+tokio = { version = "1.41.1", features = ["full"] }
