@@ -1,0 +1,61 @@
+query PullRequestsQuery($first: Int!, $after: String, $query: String!) {
+  search( type: ISSUE first: $first after: $after query: $query) {
+    issueCount
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    nodes {
+      __typename
+      ... on PullRequest {
+        title
+        createdAt
+        mergedAt
+        reviewDecision
+        url
+        totalCommentsCount
+        author {
+          __typename
+          login
+        }
+        commits(first: 10) {
+          totalCount
+        }
+        changedFiles
+        comments(first: 10) {
+          totalCount
+          edges {
+            node {
+              author {
+                __typename
+                login
+              }
+            }
+          }
+        }
+        reviews(first: 1, states: [APPROVED]) {
+          totalCount
+          nodes {
+            author {
+              __typename
+              login
+            }
+            createdAt
+          }
+        }
+        timelineItems(first: 10, itemTypes: [PULL_REQUEST_REVIEW]) {
+          nodes {
+            __typename
+            ... on PullRequestReview {
+              author {
+                __typename
+                login
+              }
+              createdAt
+            }
+          }
+        }
+      }
+    }
+  }
+}
