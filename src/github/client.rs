@@ -1,0 +1,443 @@
+use graphql_client::GraphQLQuery;
+use serde::Serialize;
+
+use crate::github::gql::query::{pull_requests_query, PullRequestsQuery};
+use crate::github::gql::scaler::DateTime;
+
+use std::collections::HashMap;
+
+pub struct Client {
+    inner: octocrab::Octocrab,
+}
+
+#[derive(Debug, Serialize)]
+pub struct PullRequestsSummary {
+    start_date: String,
+    end_date: String,
+
+    prs_count: i64,
+    prs_summaries: Vec<PullRequestSummary>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct PullRequestSummary {
+    url: String,
+    author: String,
+    comments_count: i64,
+    reviewee_comments_count: i64,
+    reviewer_comments_count: i64,
+    commits_count: i64,
+    changed_files_count: i64,
+    created_at: DateTime,
+    first_contacted_at: Option<DateTime>,
+    approved_at: Option<DateTime>,
+    merged_at: Option<DateTime>,
+}
+
+impl Client {
+    pub fn new(token: String) -> Self {
+        let octocrab = octocrab::Octocrab::builder()
+            .personal_token(token)
+            .build()
+            .unwrap_or_else(|e| panic!("Failed to create client: {}", e));
+        Self { inner: octocrab }
+    }
+
+    pub async fn get_pull_requests_summary(
+        &self,
+        repo: String,
+        start_date: String,
+        end_date: String,
+    ) -> PullRequestsSummary {
+        let offset = 10;
+        let query = format!("repo:{repo} is:pull-request created:{start_date}..{end_date}");
+        let mut variables = pull_requests_query::Variables {
+            first: offset,
+            query: query.to_string(),
+            threshold: 50,
+            after: None,
+        };
+
+        let mut summary = PullRequestsSummary {
+            start_date,
+            end_date,
+            prs_count: 0,
+            prs_summaries: vec![],
+        };
+
+        loop {
+            let response: octocrab::Result<
+                graphql_client::Response<pull_requests_query::ResponseData>,
+            > = self
+                .inner
+                .graphql(&PullRequestsQuery::build_query(variables.clone()))
+                .await;
+
+            match response {
+                Ok(response) => {
+                    let prs = &response.data.as_ref().unwrap().search;
+                    summary.prs_count = prs.issue_count;
+
+                    for item in prs.nodes.as_ref().unwrap().iter().flatten() {
+                        let pr = match item {
+                            pull_requests_query::PullRequestsQuerySearchNodes::PullRequest(pr) => {
+                                pr
+                            }
+                            _ => continue,
+                        };
+                        let author = pr.author.as_ref().unwrap().login.clone();
+
+                        let reviews = pr.reviews.as_ref().unwrap().nodes.as_ref();
+                        let comments = pr.comments.nodes.as_ref();
+                        let first_review = match reviews.unwrap().first() {
+                            Some(review) => Some(review),
+                            None => None,
+                        };
+                        let first_reviewed_at = match first_review {
+                            Some(review) => Some(review.as_ref().unwrap().created_at.clone()),
+                            None => None,
+                        };
+                        let first_comment = match comments.unwrap().first() {
+                            Some(comment) => Some(comment),
+                            None => None,
+                        };
+                        let first_commented_at = match first_comment {
+                            Some(comment) => Some(comment.as_ref().unwrap().created_at.clone()),
+                            None => None,
+                        };
+                        let first_contacted_at = match (first_reviewed_at, first_commented_at) {
+                            (None, Some(commented_at)) => Some(commented_at),
+                            (Some(reviewed_at), None) => Some(reviewed_at),
+                            (Some(reviewed_at), Some(commented_at)) => {
+                                if reviewed_at > commented_at {
+                                    Some(commented_at)
+                                } else {
+                                    Some(reviewed_at)
+                                }
+                            }
+                            (None, None) => None,
+                        };
+
+                        let mut reviewee_comments_count = 0;
+                        {
+                            reviewee_comments_count += reviews
+                                .unwrap()
+                                .iter()
+                                .filter(|item| match item {
+                                    Some(item) => {
+                                        item.author.as_ref().unwrap().login == author.as_ref()
+                                    }
+                                    _ => false,
+                                })
+                                .count()
+                                as i64;
+                            reviewee_comments_count += comments
+                                .unwrap()
+                                .iter()
+                                .filter(|item| match item {
+                                    Some(item) => {
+                                        item.author.as_ref().unwrap().login == author.as_ref()
+                                    }
+                                    _ => false,
+                                })
+                                .count()
+                                as i64;
+                        }
+                        let mut reviewer_comments_count = 0;
+                        {
+                            reviewer_comments_count += reviews
+                                .unwrap()
+                                .iter()
+                                .filter(|item| match item {
+                                    Some(item) => {
+                                        item.author.as_ref().unwrap().login != author.as_ref()
+                                    }
+                                    _ => false,
+                                })
+                                .count()
+                                as i64;
+                            reviewer_comments_count += comments
+                                .unwrap()
+                                .iter()
+                                .filter(|item| match item {
+                                    Some(item) => {
+                                        item.author.as_ref().unwrap().login != author.as_ref()
+                                    }
+                                    _ => false,
+                                })
+                                .count()
+                                as i64;
+                        }
+
+                        let approved_at = match reviews.unwrap().iter().find(|review| {
+                            review.as_ref().unwrap().state
+                                == pull_requests_query::PullRequestReviewState::APPROVED
+                        }) {
+                            Some(approved) => Some(approved.as_ref().unwrap().created_at.clone()),
+                            None => None,
+                        };
+
+                        let merged_at = match pr.merged_at.clone() {
+                            Some(at) => Some(at),
+                            None => None,
+                        };
+                        summary.prs_summaries.push(PullRequestSummary {
+                            url: pr.url.clone(),
+                            author,
+                            comments_count: pr.total_comments_count.unwrap(),
+                            reviewee_comments_count,
+                            reviewer_comments_count,
+                            commits_count: pr.commits.total_count,
+                            changed_files_count: pr.changed_files,
+                            created_at: pr.created_at.clone(),
+                            first_contacted_at,
+                            approved_at,
+                            merged_at,
+                        })
+                    }
+
+                    if !prs.page_info.has_next_page {
+                        break;
+                    }
+                    variables.after = prs.page_info.end_cursor.clone();
+                }
+                Err(error) => {
+                    println!("{error:#?}");
+                }
+            };
+        }
+
+        summary
+    }
+
+    pub async fn get_pull_requests_summary_on_individuals(
+        &self,
+        repo: String,
+        start_date: String,
+        end_date: String,
+        individuals: Vec<String>,
+    ) -> HashMap<String, PullRequestsSummary> {
+        let offset = 10;
+        let query = format!("repo:{repo} is:pull-request created:{start_date}..{end_date}");
+        let mut variables = pull_requests_query::Variables {
+            first: offset,
+            query: query.to_string(),
+            threshold: 50,
+            after: None,
+        };
+
+        let mut summaries: HashMap<String, PullRequestsSummary> = HashMap::new();
+
+        loop {
+            let response: octocrab::Result<
+                graphql_client::Response<pull_requests_query::ResponseData>,
+            > = self
+                .inner
+                .graphql(&PullRequestsQuery::build_query(variables.clone()))
+                .await;
+
+            match response {
+                Ok(response) => {
+                    let prs = &response.data.as_ref().unwrap().search;
+
+                    for individual in individuals.iter() {
+                        for item in prs.nodes.as_ref().unwrap().iter().flatten() {
+                            let pr = match item {
+                                pull_requests_query::PullRequestsQuerySearchNodes::PullRequest(
+                                    pr,
+                                ) => pr,
+                                _ => continue,
+                            };
+                            let author = pr.author.as_ref().unwrap().login.clone();
+                            summaries
+                                .entry(individual.clone())
+                                .and_modify(|summary| {
+                                    if *individual == author {
+                                        summary.prs_count += 1
+                                    }
+                                })
+                                .or_insert(PullRequestsSummary {
+                                    start_date: start_date.clone(),
+                                    end_date: end_date.clone(),
+                                    prs_count: 0,
+                                    prs_summaries: vec![],
+                                });
+
+                            let reviews = pr.reviews.as_ref().unwrap().nodes.as_ref();
+                            let comments = pr.comments.nodes.as_ref();
+                            let first_review = match reviews.as_ref().unwrap().first() {
+                                Some(review) => Some(review),
+                                None => None,
+                            };
+                            let first_reviewed_at = match first_review {
+                                Some(review) => {
+                                    match review
+                                        .as_ref()
+                                        .unwrap()
+                                        .author
+                                        .as_ref()
+                                        .unwrap()
+                                        .login
+                                        .clone()
+                                        == individual.as_ref()
+                                    {
+                                        true => Some(review.as_ref().unwrap().created_at.clone()),
+                                        false => None,
+                                    }
+                                }
+                                None => None,
+                            };
+                            let first_comment = match comments.as_ref().unwrap().first() {
+                                Some(comment) => Some(comment),
+                                None => None,
+                            };
+                            let first_commented_at = match first_comment {
+                                Some(comment) => {
+                                    match comment
+                                        .as_ref()
+                                        .unwrap()
+                                        .author
+                                        .as_ref()
+                                        .unwrap()
+                                        .login
+                                        .clone()
+                                        == individual.as_ref()
+                                    {
+                                        true => Some(comment.as_ref().unwrap().created_at.clone()),
+                                        false => None,
+                                    }
+                                }
+                                None => None,
+                            };
+                            let first_contacted_at = match (first_reviewed_at, first_commented_at) {
+                                (None, Some(commented_at)) => Some(commented_at),
+                                (Some(reviewed_at), None) => Some(reviewed_at),
+                                (Some(reviewed_at), Some(commented_at)) => {
+                                    if reviewed_at > commented_at {
+                                        Some(commented_at)
+                                    } else {
+                                        Some(reviewed_at)
+                                    }
+                                }
+                                (None, None) => None,
+                            };
+
+                            let mut comments_count = 0;
+                            {
+                                comments_count += reviews
+                                    .as_ref()
+                                    .unwrap()
+                                    .iter()
+                                    .filter(|item| match item {
+                                        Some(item) => {
+                                            item.author.as_ref().unwrap().login
+                                                == individual.as_ref()
+                                        }
+                                        _ => false,
+                                    })
+                                    .count()
+                                    as i64;
+                                comments_count += comments
+                                    .as_ref()
+                                    .unwrap()
+                                    .iter()
+                                    .filter(|item| match item {
+                                        Some(item) => {
+                                            item.author.as_ref().unwrap().login
+                                                == individual.as_ref()
+                                        }
+                                        _ => false,
+                                    })
+                                    .count()
+                                    as i64;
+                            }
+
+                            let reviewee_comments_count = if author == individual.as_ref() {
+                                comments_count
+                            } else {
+                                0
+                            };
+                            let reviewer_comments_count = if author != individual.as_ref() {
+                                comments_count
+                            } else {
+                                0
+                            };
+
+                            let commits_count = if author == *individual {
+                                pr.commits.total_count
+                            } else {
+                                0
+                            };
+                            let changed_files_count = if author == *individual {
+                                pr.changed_files
+                            } else {
+                                0
+                            };
+
+                            let approved_at =
+                                match reviews.as_ref().unwrap().iter().find(|review| {
+                                    review.as_ref().unwrap().state
+                                        == pull_requests_query::PullRequestReviewState::APPROVED
+                                }) {
+                                    Some(approved) => {
+                                        match approved
+                                            .as_ref()
+                                            .unwrap()
+                                            .author
+                                            .as_ref()
+                                            .unwrap()
+                                            .login
+                                            .clone()
+                                            == individual.as_ref()
+                                        {
+                                            true => {
+                                                Some(approved.as_ref().unwrap().created_at.clone())
+                                            }
+                                            false => None,
+                                        }
+                                    }
+                                    None => None,
+                                };
+
+                            let merged_at = match pr.merged_by.as_ref().unwrap().login.clone()
+                                == individual.as_ref()
+                            {
+                                true => match pr.merged_at.clone() {
+                                    Some(at) => Some(at),
+                                    None => None,
+                                },
+                                false => None,
+                            };
+
+                            summaries.entry(individual.clone()).and_modify(|summary| {
+                                summary.prs_summaries.push(PullRequestSummary {
+                                    url: pr.url.clone(),
+                                    author: author.clone(),
+                                    comments_count,
+                                    reviewee_comments_count,
+                                    reviewer_comments_count,
+                                    commits_count,
+                                    changed_files_count,
+                                    created_at: pr.created_at.clone(),
+                                    first_contacted_at,
+                                    approved_at,
+                                    merged_at,
+                                })
+                            });
+                        }
+                    }
+
+                    if !prs.page_info.has_next_page {
+                        break;
+                    }
+                    variables.after = prs.page_info.end_cursor.clone();
+                }
+                Err(error) => {
+                    println!("{error:#?}");
+                }
+            };
+        }
+
+        summaries
+    }
+}

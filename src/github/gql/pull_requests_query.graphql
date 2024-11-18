@@ -1,0 +1,62 @@
+query PullRequestsQuery($first: Int!, $after: String, $query: String!, $threshold: Int!) {
+  search( type: ISSUE first: $first after: $after query: $query) {
+    issueCount
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    nodes {
+      __typename
+      ... on PullRequest {
+        title
+        createdAt
+        mergedAt
+        reviewDecision
+        url
+        totalCommentsCount
+        author {
+          __typename
+          login
+        }
+        mergedBy {
+          __typename
+          login
+        }
+        commits(first: $threshold) {
+          totalCount
+          nodes {
+            commit {
+              author {
+                user {
+                  login
+                }
+              }
+            }
+          }
+        }
+        changedFiles
+        comments(first: $threshold) {
+          totalCount
+          nodes {
+            author {
+              __typename
+              login
+            }
+            createdAt
+          }
+        }
+        reviews(first: $threshold) {
+          totalCount
+          nodes {
+            author {
+              __typename
+              login
+            }
+            createdAt
+            state
+          }
+        }
+      }
+    }
+  }
+}
