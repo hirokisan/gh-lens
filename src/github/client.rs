@@ -389,14 +389,17 @@ impl Client {
                                     None => None,
                                 };
 
-                            let merged_at = match pr.merged_by.as_ref().unwrap().login.clone()
-                                == individual.as_ref()
-                            {
-                                true => match pr.merged_at.clone() {
-                                    Some(at) => Some(at),
-                                    None => None,
-                                },
-                                false => None,
+                            let merged_at = match pr.merged_by.as_ref() {
+                                Some(merged_by) => {
+                                    match merged_by.login.clone() == individual.as_ref() {
+                                        true => match pr.merged_at.clone() {
+                                            Some(at) => Some(at),
+                                            None => None,
+                                        },
+                                        false => None,
+                                    }
+                                }
+                                None => None,
                             };
 
                             summaries.entry(individual.clone()).and_modify(|summary| {
