@@ -33,7 +33,8 @@ enum SubCommand {
         scope: Scope,
         #[arg(
             long,
-            help = "Specify when scope is individual e.g. USERNAME1,USERNAME2"
+            help = "Specify when scope is individual e.g. USERNAME1,USERNAME2",
+            value_delimiter = ','
         )]
         members: Vec<String>,
         #[arg(long, default_value = "all")]
