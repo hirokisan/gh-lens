@@ -18,6 +18,7 @@ pub struct PullRequestsSummary {
     prs_count: i64,
     comments_count: PullRequestCommentsCount,
     commits_count: PullRequestCommitsCount,
+    changed_files_count: PullRequestChangedFilesCount,
 
     prs_summaries: Vec<PullRequestSummary>,
 }
@@ -49,10 +50,17 @@ pub struct PullRequestCommitsCount {
     average: f64,
 }
 
+#[derive(Debug, Serialize)]
+pub struct PullRequestChangedFilesCount {
+    sum: i64,
+    average: f64,
+}
+
 impl PullRequestsSummary {
     fn aggregate_summary(&mut self) {
         self.aggregate_comments_count();
         self.aggregate_commits_count();
+        self.aggregate_changed_files_count();
     }
 
     fn aggregate_comments_count(&mut self) {
@@ -78,6 +86,19 @@ impl PullRequestsSummary {
             0.0
         } else {
             self.commits_count.sum as f64 / self.prs_count as f64
+        };
+    }
+
+    fn aggregate_changed_files_count(&mut self) {
+        self.changed_files_count.sum = self
+            .prs_summaries
+            .iter()
+            .map(|summary| summary.changed_files_count)
+            .sum();
+        self.changed_files_count.average = if self.prs_count == 0 {
+            0.0
+        } else {
+            self.changed_files_count.sum as f64 / self.prs_count as f64
         };
     }
 }
@@ -115,6 +136,10 @@ impl Client {
                 average: 0.0,
             },
             commits_count: PullRequestCommitsCount {
+                sum: 0,
+                average: 0.0,
+            },
+            changed_files_count: PullRequestChangedFilesCount {
                 sum: 0,
                 average: 0.0,
             },
@@ -353,6 +378,10 @@ impl Client {
                                         average: 0.0,
                                     },
                                     commits_count: PullRequestCommitsCount {
+                                        sum: 0,
+                                        average: 0.0,
+                                    },
+                                    changed_files_count: PullRequestChangedFilesCount {
                                         sum: 0,
                                         average: 0.0,
                                     },
