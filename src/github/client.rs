@@ -17,6 +17,7 @@ pub struct PullRequestsSummary {
 
     prs_count: i64,
     comments_count: PullRequestCommentsCount,
+    commits_count: PullRequestCommitsCount,
 
     prs_summaries: Vec<PullRequestSummary>,
 }
@@ -42,9 +43,16 @@ pub struct PullRequestCommentsCount {
     average: f64,
 }
 
+#[derive(Debug, Serialize)]
+pub struct PullRequestCommitsCount {
+    sum: i64,
+    average: f64,
+}
+
 impl PullRequestsSummary {
     fn aggregate_summary(&mut self) {
         self.aggregate_comments_count();
+        self.aggregate_commits_count();
     }
 
     fn aggregate_comments_count(&mut self) {
@@ -57,6 +65,19 @@ impl PullRequestsSummary {
             0.0
         } else {
             self.comments_count.sum as f64 / self.prs_summaries.len() as f64
+        };
+    }
+
+    fn aggregate_commits_count(&mut self) {
+        self.commits_count.sum = self
+            .prs_summaries
+            .iter()
+            .map(|summary| summary.commits_count)
+            .sum();
+        self.commits_count.average = if self.prs_count == 0 {
+            0.0
+        } else {
+            self.commits_count.sum as f64 / self.prs_count as f64
         };
     }
 }
@@ -90,6 +111,10 @@ impl Client {
             end_date,
             prs_count: 0,
             comments_count: PullRequestCommentsCount {
+                sum: 0,
+                average: 0.0,
+            },
+            commits_count: PullRequestCommitsCount {
                 sum: 0,
                 average: 0.0,
             },
@@ -324,6 +349,10 @@ impl Client {
                                     end_date: end_date.clone(),
                                     prs_count: 0,
                                     comments_count: PullRequestCommentsCount {
+                                        sum: 0,
+                                        average: 0.0,
+                                    },
+                                    commits_count: PullRequestCommitsCount {
                                         sum: 0,
                                         average: 0.0,
                                     },
