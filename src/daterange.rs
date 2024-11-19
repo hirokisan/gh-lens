@@ -18,9 +18,9 @@ pub fn get_monthly_date_ranges(
     let mut start = from.clone();
     loop {
         let end = start
-            .pred_opt()
-            .unwrap()
             .checked_add_months(Months::new(1))
+            .unwrap()
+            .pred_opt()
             .unwrap();
         result.push((start, end));
         if to == end {
