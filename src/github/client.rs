@@ -85,11 +85,17 @@ impl Client {
                             }
                             _ => continue,
                         };
-                        let author = pr.author.as_ref().unwrap().login.clone();
+                        let author = match pr.author.as_ref() {
+                            Some(author) => author.login.clone(),
+                            None => "no-author".to_string(),
+                        };
 
                         let reviews = pr.reviews.as_ref().unwrap().nodes.as_ref();
                         let comments = pr.comments.nodes.as_ref();
                         let first_review = match reviews.unwrap().iter().find(|review| {
+                            if review.as_ref().unwrap().author.as_ref().is_none() {
+                                return false;
+                            }
                             review.as_ref().unwrap().author.as_ref().unwrap().login
                                 != author.as_ref()
                         }) {
@@ -101,6 +107,9 @@ impl Client {
                             None => None,
                         };
                         let first_comment = match comments.unwrap().iter().find(|comment| {
+                            if comment.as_ref().unwrap().author.as_ref().is_none() {
+                                return false;
+                            }
                             comment.as_ref().unwrap().author.as_ref().unwrap().login
                                 != author.as_ref()
                         }) {
@@ -131,6 +140,9 @@ impl Client {
                                 .iter()
                                 .filter(|item| match item {
                                     Some(item) => {
+                                        if item.author.as_ref().is_none() {
+                                            return false;
+                                        }
                                         item.author.as_ref().unwrap().login == author.as_ref()
                                     }
                                     _ => false,
@@ -142,6 +154,9 @@ impl Client {
                                 .iter()
                                 .filter(|item| match item {
                                     Some(item) => {
+                                        if item.author.as_ref().is_none() {
+                                            return false;
+                                        }
                                         item.author.as_ref().unwrap().login == author.as_ref()
                                     }
                                     _ => false,
@@ -156,6 +171,9 @@ impl Client {
                                 .iter()
                                 .filter(|item| match item {
                                     Some(item) => {
+                                        if item.author.as_ref().is_none() {
+                                            return false;
+                                        }
                                         item.author.as_ref().unwrap().login != author.as_ref()
                                     }
                                     _ => false,
@@ -167,6 +185,9 @@ impl Client {
                                 .iter()
                                 .filter(|item| match item {
                                     Some(item) => {
+                                        if item.author.as_ref().is_none() {
+                                            return false;
+                                        }
                                         item.author.as_ref().unwrap().login != author.as_ref()
                                     }
                                     _ => false,
@@ -254,7 +275,10 @@ impl Client {
                                 ) => pr,
                                 _ => continue,
                             };
-                            let author = pr.author.as_ref().unwrap().login.clone();
+                            let author = match pr.author.as_ref() {
+                                Some(author) => author.login.clone(),
+                                None => "no-author".to_string(),
+                            };
                             summaries
                                 .entry(individual.clone())
                                 .and_modify(|summary| {
@@ -273,6 +297,9 @@ impl Client {
                             let comments = pr.comments.nodes.as_ref();
                             let first_review =
                                 match reviews.as_ref().unwrap().iter().find(|review| {
+                                    if review.as_ref().unwrap().author.as_ref().is_none() {
+                                        return false;
+                                    }
                                     review.as_ref().unwrap().author.as_ref().unwrap().login
                                         != author
                                         && review.as_ref().unwrap().author.as_ref().unwrap().login
@@ -287,6 +314,9 @@ impl Client {
                             };
                             let first_comment =
                                 match comments.as_ref().unwrap().iter().find(|comment| {
+                                    if comment.as_ref().unwrap().author.as_ref().is_none() {
+                                        return false;
+                                    }
                                     comment.as_ref().unwrap().author.as_ref().unwrap().login
                                         != author
                                         && comment.as_ref().unwrap().author.as_ref().unwrap().login
@@ -320,6 +350,9 @@ impl Client {
                                     .iter()
                                     .filter(|item| match item {
                                         Some(item) => {
+                                            if item.author.as_ref().is_none() {
+                                                return false;
+                                            }
                                             item.author.as_ref().unwrap().login
                                                 == individual.as_ref()
                                         }
@@ -333,6 +366,9 @@ impl Client {
                                     .iter()
                                     .filter(|item| match item {
                                         Some(item) => {
+                                            if item.author.as_ref().is_none() {
+                                                return false;
+                                            }
                                             item.author.as_ref().unwrap().login
                                                 == individual.as_ref()
                                         }
