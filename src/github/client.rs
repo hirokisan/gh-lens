@@ -89,7 +89,10 @@ impl Client {
 
                         let reviews = pr.reviews.as_ref().unwrap().nodes.as_ref();
                         let comments = pr.comments.nodes.as_ref();
-                        let first_review = match reviews.unwrap().first() {
+                        let first_review = match reviews.unwrap().iter().find(|review| {
+                            review.as_ref().unwrap().author.as_ref().unwrap().login
+                                != author.as_ref()
+                        }) {
                             Some(review) => Some(review),
                             None => None,
                         };
@@ -97,7 +100,10 @@ impl Client {
                             Some(review) => Some(review.as_ref().unwrap().created_at.clone()),
                             None => None,
                         };
-                        let first_comment = match comments.unwrap().first() {
+                        let first_comment = match comments.unwrap().iter().find(|comment| {
+                            comment.as_ref().unwrap().author.as_ref().unwrap().login
+                                != author.as_ref()
+                        }) {
                             Some(comment) => Some(comment),
                             None => None,
                         };
@@ -265,48 +271,32 @@ impl Client {
 
                             let reviews = pr.reviews.as_ref().unwrap().nodes.as_ref();
                             let comments = pr.comments.nodes.as_ref();
-                            let first_review = match reviews.as_ref().unwrap().first() {
-                                Some(review) => Some(review),
-                                None => None,
-                            };
+                            let first_review =
+                                match reviews.as_ref().unwrap().iter().find(|review| {
+                                    review.as_ref().unwrap().author.as_ref().unwrap().login
+                                        != author
+                                        && review.as_ref().unwrap().author.as_ref().unwrap().login
+                                            == individual.as_ref()
+                                }) {
+                                    Some(review) => Some(review),
+                                    None => None,
+                                };
                             let first_reviewed_at = match first_review {
-                                Some(review) => {
-                                    match review
-                                        .as_ref()
-                                        .unwrap()
-                                        .author
-                                        .as_ref()
-                                        .unwrap()
-                                        .login
-                                        .clone()
-                                        == individual.as_ref()
-                                    {
-                                        true => Some(review.as_ref().unwrap().created_at.clone()),
-                                        false => None,
-                                    }
-                                }
+                                Some(review) => Some(review.as_ref().unwrap().created_at.clone()),
                                 None => None,
                             };
-                            let first_comment = match comments.as_ref().unwrap().first() {
-                                Some(comment) => Some(comment),
-                                None => None,
-                            };
+                            let first_comment =
+                                match comments.as_ref().unwrap().iter().find(|comment| {
+                                    comment.as_ref().unwrap().author.as_ref().unwrap().login
+                                        != author
+                                        && comment.as_ref().unwrap().author.as_ref().unwrap().login
+                                            == individual.as_ref()
+                                }) {
+                                    Some(comment) => Some(comment),
+                                    None => None,
+                                };
                             let first_commented_at = match first_comment {
-                                Some(comment) => {
-                                    match comment
-                                        .as_ref()
-                                        .unwrap()
-                                        .author
-                                        .as_ref()
-                                        .unwrap()
-                                        .login
-                                        .clone()
-                                        == individual.as_ref()
-                                    {
-                                        true => Some(comment.as_ref().unwrap().created_at.clone()),
-                                        false => None,
-                                    }
-                                }
+                                Some(comment) => Some(comment.as_ref().unwrap().created_at.clone()),
                                 None => None,
                             };
                             let first_contacted_at = match (first_reviewed_at, first_commented_at) {
