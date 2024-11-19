@@ -16,6 +16,8 @@ pub struct PullRequestsSummary {
     end_date: String,
 
     prs_count: i64,
+    comments_count: PullRequestCommentsCount,
+
     prs_summaries: Vec<PullRequestSummary>,
 }
 
@@ -32,6 +34,31 @@ pub struct PullRequestSummary {
     first_contacted_at: Option<DateTime>,
     approved_at: Option<DateTime>,
     merged_at: Option<DateTime>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct PullRequestCommentsCount {
+    sum: i64,
+    average: f64,
+}
+
+impl PullRequestsSummary {
+    fn aggregate_summary(&mut self) {
+        self.aggregate_comments_count();
+    }
+
+    fn aggregate_comments_count(&mut self) {
+        self.comments_count.sum = self
+            .prs_summaries
+            .iter()
+            .map(|summary| summary.comments_count)
+            .sum();
+        self.comments_count.average = if self.prs_summaries.is_empty() {
+            0.0
+        } else {
+            self.comments_count.sum as f64 / self.prs_summaries.len() as f64
+        };
+    }
 }
 
 impl Client {
@@ -62,6 +89,10 @@ impl Client {
             start_date,
             end_date,
             prs_count: 0,
+            comments_count: PullRequestCommentsCount {
+                sum: 0,
+                average: 0.0,
+            },
             prs_summaries: vec![],
         };
 
@@ -234,6 +265,8 @@ impl Client {
             };
         }
 
+        summary.aggregate_summary();
+
         summary
     }
 
@@ -290,6 +323,10 @@ impl Client {
                                     start_date: start_date.clone(),
                                     end_date: end_date.clone(),
                                     prs_count: 0,
+                                    comments_count: PullRequestCommentsCount {
+                                        sum: 0,
+                                        average: 0.0,
+                                    },
                                     prs_summaries: vec![],
                                 });
 
@@ -454,6 +491,9 @@ impl Client {
                                 })
                             });
                         }
+                        summaries.entry(individual.clone()).and_modify(|summary| {
+                            summary.aggregate_summary();
+                        });
                     }
 
                     if !prs.page_info.has_next_page {
