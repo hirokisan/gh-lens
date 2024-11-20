@@ -6,8 +6,6 @@ use anyhow::Result;
 use chrono::NaiveDate;
 use std::collections::HashMap;
 
-use serde_json;
-
 mod daterange;
 mod github;
 
@@ -97,7 +95,7 @@ async fn main() -> Result<()> {
                     println!("{}", serde_json::to_string(&result)?);
                 }
                 (Scope::Individual, Period::All) => {
-                    if members.len() == 0 {
+                    if members.is_empty() {
                         return Err(anyhow::anyhow!("members must be specified for individual"));
                     }
                     let result = client
@@ -108,7 +106,7 @@ async fn main() -> Result<()> {
                     println!("{}", serde_json::to_string(&result)?);
                 }
                 (Scope::Individual, Period::Monthly) => {
-                    if members.len() == 0 {
+                    if members.is_empty() {
                         return Err(anyhow::anyhow!("members must be specified for individual"));
                     }
                     let drs = get_monthly_date_ranges(from, to)?;
