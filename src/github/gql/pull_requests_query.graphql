@@ -48,6 +48,7 @@ query PullRequestsQuery($first: Int!, $after: String, $query: String!, $threshol
         reviews(first: $threshold) {
           totalCount
           nodes {
+            body
             author {
               __typename
               login

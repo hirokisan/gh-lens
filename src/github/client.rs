@@ -329,6 +329,12 @@ impl Client {
                                 .iter()
                                 .filter(|item| match item {
                                     Some(item) => {
+                                        if item.state
+                                            == pull_requests_query::PullRequestReviewState::APPROVED
+                                            && item.body.is_empty()
+                                        {
+                                            return false;
+                                        }
                                         if item.author.as_ref().is_none() {
                                             return false;
                                         }
