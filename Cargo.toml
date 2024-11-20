@@ -1,9 +1,19 @@
 [package]
 name = "gh-lens"
+authors = ["hirokisan <dev@hirokiueno.com>"]
 description = "CLI to analyze your activity on GitHub"
-version = "0.0.8"
+version = "0.0.9"
 edition = "2021"
 license = "MIT"
+keywords = ["github", "cli", "analysis", "gh-lens"]
+categories = ["command-line-utilities"]
+homepage = "https://github.com/hirokisan/gh-lens"
+repository = "https://github.com/hirokisan/gh-lens"
+readme = "README.md"
+rust-version = "1.79.0"
+
+[[bin]]
+name = "gh-lens"
 
 [dependencies]
 anyhow = "1.0.93"

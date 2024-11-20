@@ -22,6 +22,27 @@ $ gh-lens prs --repo hirokisan/gh-lens --start-date 2024-11-12 --end-date 2024-1
   "start_date": "2024-11-12",
   "end_date": "2024-11-18",
   "prs_count": 1,
+  "comments_count": {
+    "sum": 0,
+    "average": 0.0
+  },
+  "commits_count": {
+    "sum": 2,
+    "average": 2.0
+  },
+  "changed_files_count": {
+    "sum": 13,
+    "average": 13.0
+  },
+  "time_to_first_contacted": {
+    "average": 0.0
+  },
+  "time_to_approved": {
+    "average": 0.0
+  },
+  "time_to_merged": {
+    "average": 260219.0
+  },
   "prs_summaries": [
     {
       "url": "https://github.com/hirokisan/gh-lens/pull/1",
