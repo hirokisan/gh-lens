@@ -15,7 +15,7 @@ pub fn get_monthly_date_ranges(
 
     let mut result = vec![];
 
-    let mut start = from.clone();
+    let mut start = from;
     loop {
         let end = start
             .checked_add_months(Months::new(1))

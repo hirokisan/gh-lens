@@ -260,34 +260,24 @@ impl Client {
 
                         let reviews = pr.reviews.as_ref().unwrap().nodes.as_ref();
                         let comments = pr.comments.nodes.as_ref();
-                        let first_review = match reviews.unwrap().iter().find(|review| {
+                        let first_review = reviews.unwrap().iter().find(|review| {
                             if review.as_ref().unwrap().author.as_ref().is_none() {
                                 return false;
                             }
                             review.as_ref().unwrap().author.as_ref().unwrap().login
                                 != author.as_ref()
-                        }) {
-                            Some(review) => Some(review),
-                            None => None,
-                        };
-                        let first_reviewed_at = match first_review {
-                            Some(review) => Some(review.as_ref().unwrap().created_at.clone()),
-                            None => None,
-                        };
-                        let first_comment = match comments.unwrap().iter().find(|comment| {
+                        });
+                        let first_reviewed_at =
+                            first_review.map(|review| review.as_ref().unwrap().created_at.clone());
+                        let first_comment = comments.unwrap().iter().find(|comment| {
                             if comment.as_ref().unwrap().author.as_ref().is_none() {
                                 return false;
                             }
                             comment.as_ref().unwrap().author.as_ref().unwrap().login
                                 != author.as_ref()
-                        }) {
-                            Some(comment) => Some(comment),
-                            None => None,
-                        };
-                        let first_commented_at = match first_comment {
-                            Some(comment) => Some(comment.as_ref().unwrap().created_at.clone()),
-                            None => None,
-                        };
+                        });
+                        let first_commented_at = first_comment
+                            .map(|comment| comment.as_ref().unwrap().created_at.clone());
                         let first_contacted_at = match (first_reviewed_at, first_commented_at) {
                             (None, Some(commented_at)) => Some(commented_at),
                             (Some(reviewed_at), None) => Some(reviewed_at),
@@ -364,18 +354,16 @@ impl Client {
                                 as i64;
                         }
 
-                        let approved_at = match reviews.unwrap().iter().find(|review| {
-                            review.as_ref().unwrap().state
-                                == pull_requests_query::PullRequestReviewState::APPROVED
-                        }) {
-                            Some(approved) => Some(approved.as_ref().unwrap().created_at.clone()),
-                            None => None,
-                        };
+                        let approved_at = reviews
+                            .unwrap()
+                            .iter()
+                            .find(|review| {
+                                review.as_ref().unwrap().state
+                                    == pull_requests_query::PullRequestReviewState::APPROVED
+                            })
+                            .map(|approved| approved.as_ref().unwrap().created_at.clone());
 
-                        let merged_at = match pr.merged_at.clone() {
-                            Some(at) => Some(at),
-                            None => None,
-                        };
+                        let merged_at = pr.merged_at.clone();
                         summary.prs_summaries.push(PullRequestSummary {
                             url: pr.url.clone(),
                             author,
@@ -394,7 +382,7 @@ impl Client {
                     if !prs.page_info.has_next_page {
                         break;
                     }
-                    variables.after = prs.page_info.end_cursor.clone();
+                    variables.after.clone_from(&prs.page_info.end_cursor);
                 }
                 Err(error) => {
                     println!("{error:#?}");
@@ -482,40 +470,27 @@ impl Client {
 
                             let reviews = pr.reviews.as_ref().unwrap().nodes.as_ref();
                             let comments = pr.comments.nodes.as_ref();
-                            let first_review =
-                                match reviews.as_ref().unwrap().iter().find(|review| {
-                                    if review.as_ref().unwrap().author.as_ref().is_none() {
-                                        return false;
-                                    }
-                                    review.as_ref().unwrap().author.as_ref().unwrap().login
-                                        != author
-                                        && review.as_ref().unwrap().author.as_ref().unwrap().login
-                                            == individual.as_ref()
-                                }) {
-                                    Some(review) => Some(review),
-                                    None => None,
-                                };
-                            let first_reviewed_at = match first_review {
-                                Some(review) => Some(review.as_ref().unwrap().created_at.clone()),
-                                None => None,
-                            };
-                            let first_comment =
-                                match comments.as_ref().unwrap().iter().find(|comment| {
-                                    if comment.as_ref().unwrap().author.as_ref().is_none() {
-                                        return false;
-                                    }
-                                    comment.as_ref().unwrap().author.as_ref().unwrap().login
-                                        != author
-                                        && comment.as_ref().unwrap().author.as_ref().unwrap().login
-                                            == individual.as_ref()
-                                }) {
-                                    Some(comment) => Some(comment),
-                                    None => None,
-                                };
-                            let first_commented_at = match first_comment {
-                                Some(comment) => Some(comment.as_ref().unwrap().created_at.clone()),
-                                None => None,
-                            };
+                            let first_review = reviews.as_ref().unwrap().iter().find(|review| {
+                                if review.as_ref().unwrap().author.as_ref().is_none() {
+                                    return false;
+                                }
+                                review.as_ref().unwrap().author.as_ref().unwrap().login != author
+                                    && review.as_ref().unwrap().author.as_ref().unwrap().login
+                                        == individual.as_ref()
+                            });
+
+                            let first_reviewed_at = first_review
+                                .map(|review| review.as_ref().unwrap().created_at.clone());
+                            let first_comment = comments.as_ref().unwrap().iter().find(|comment| {
+                                if comment.as_ref().unwrap().author.as_ref().is_none() {
+                                    return false;
+                                }
+                                comment.as_ref().unwrap().author.as_ref().unwrap().login != author
+                                    && comment.as_ref().unwrap().author.as_ref().unwrap().login
+                                        == individual.as_ref()
+                            });
+                            let first_commented_at = first_comment
+                                .map(|comment| comment.as_ref().unwrap().created_at.clone());
                             let first_contacted_at = match (first_reviewed_at, first_commented_at) {
                                 (None, Some(commented_at)) => Some(commented_at),
                                 (Some(reviewed_at), None) => Some(reviewed_at),
@@ -615,10 +590,7 @@ impl Client {
                             let merged_at = match pr.merged_by.as_ref() {
                                 Some(merged_by) => {
                                     match merged_by.login.clone() == individual.as_ref() {
-                                        true => match pr.merged_at.clone() {
-                                            Some(at) => Some(at),
-                                            None => None,
-                                        },
+                                        true => pr.merged_at.clone(),
                                         false => None,
                                     }
                                 }
@@ -649,7 +621,7 @@ impl Client {
                     if !prs.page_info.has_next_page {
                         break;
                     }
-                    variables.after = prs.page_info.end_cursor.clone();
+                    variables.after.clone_from(&prs.page_info.end_cursor);
                 }
                 Err(error) => {
                     println!("{error:#?}");
