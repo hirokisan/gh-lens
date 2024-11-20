@@ -20,6 +20,7 @@ pub struct PullRequestsSummary {
     commits_count: PullRequestCommitsCount,
     changed_files_count: PullRequestChangedFilesCount,
     time_to_first_contacted: PullRequestTimeToFirstContacted,
+    time_to_approved: PullRequestTimeToApproved,
 
     prs_summaries: Vec<PullRequestSummary>,
 }
@@ -62,12 +63,18 @@ pub struct PullRequestTimeToFirstContacted {
     average: f64, // sec
 }
 
+#[derive(Debug, Serialize)]
+pub struct PullRequestTimeToApproved {
+    average: f64, // sec
+}
+
 impl PullRequestsSummary {
     fn aggregate_summary(&mut self) {
         self.aggregate_comments_count();
         self.aggregate_commits_count();
         self.aggregate_changed_files_count();
         self.aggregate_time_to_first_contacted();
+        self.aggregate_time_to_approved();
     }
 
     fn aggregate_comments_count(&mut self) {
@@ -129,6 +136,27 @@ impl PullRequestsSummary {
             total_seconds as f64 / count as f64
         };
     }
+
+    fn aggregate_time_to_approved(&mut self) {
+        let mut count = 0;
+        let mut total_seconds = 0;
+        for summary in self.prs_summaries.iter() {
+            if summary.approved_at.is_none() {
+                continue;
+            };
+            count += 1;
+            total_seconds += summary
+                .approved_at
+                .as_ref()
+                .unwrap()
+                .diff_seconds(&summary.created_at);
+        }
+        self.time_to_approved.average = if count == 0 {
+            0.0
+        } else {
+            total_seconds as f64 / count as f64
+        };
+    }
 }
 
 impl Client {
@@ -172,6 +200,7 @@ impl Client {
                 average: 0.0,
             },
             time_to_first_contacted: PullRequestTimeToFirstContacted { average: 0.0 },
+            time_to_approved: PullRequestTimeToApproved { average: 0.0 },
             prs_summaries: vec![],
         };
 
@@ -417,6 +446,7 @@ impl Client {
                                     time_to_first_contacted: PullRequestTimeToFirstContacted {
                                         average: 0.0,
                                     },
+                                    time_to_approved: PullRequestTimeToApproved { average: 0.0 },
                                     prs_summaries: vec![],
                                 });
 
