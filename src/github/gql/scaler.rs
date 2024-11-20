@@ -19,3 +19,13 @@ impl TryFrom<DateTime> for chrono::DateTime<chrono::Utc> {
         chrono::DateTime::parse_from_rfc3339(value.0.as_str()).map(Into::into)
     }
 }
+
+impl DateTime {
+    pub fn diff_seconds(&self, other: &DateTime) -> i64 {
+        let target = self.0.parse::<chrono::DateTime<chrono::Utc>>().unwrap();
+        let compare = other.0.parse::<chrono::DateTime<chrono::Utc>>().unwrap();
+        let duration = target - compare;
+
+        duration.num_seconds()
+    }
+}
