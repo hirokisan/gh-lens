@@ -21,6 +21,7 @@ pub struct PullRequestsSummary {
     changed_files_count: PullRequestChangedFilesCount,
     time_to_first_contacted: PullRequestTimeToFirstContacted,
     time_to_approved: PullRequestTimeToApproved,
+    time_to_merged: PullRequestTimeToMerged,
 
     prs_summaries: Vec<PullRequestSummary>,
 }
@@ -68,6 +69,11 @@ pub struct PullRequestTimeToApproved {
     average: f64, // sec
 }
 
+#[derive(Debug, Serialize)]
+pub struct PullRequestTimeToMerged {
+    average: f64, // sec
+}
+
 impl PullRequestsSummary {
     fn aggregate_summary(&mut self) {
         self.aggregate_comments_count();
@@ -75,6 +81,7 @@ impl PullRequestsSummary {
         self.aggregate_changed_files_count();
         self.aggregate_time_to_first_contacted();
         self.aggregate_time_to_approved();
+        self.aggregate_time_to_merged();
     }
 
     fn aggregate_comments_count(&mut self) {
@@ -157,6 +164,27 @@ impl PullRequestsSummary {
             total_seconds as f64 / count as f64
         };
     }
+
+    fn aggregate_time_to_merged(&mut self) {
+        let mut count = 0;
+        let mut total_seconds = 0;
+        for summary in self.prs_summaries.iter() {
+            if summary.merged_at.is_none() {
+                continue;
+            };
+            count += 1;
+            total_seconds += summary
+                .merged_at
+                .as_ref()
+                .unwrap()
+                .diff_seconds(&summary.created_at);
+        }
+        self.time_to_merged.average = if count == 0 {
+            0.0
+        } else {
+            total_seconds as f64 / count as f64
+        };
+    }
 }
 
 impl Client {
@@ -201,6 +229,7 @@ impl Client {
             },
             time_to_first_contacted: PullRequestTimeToFirstContacted { average: 0.0 },
             time_to_approved: PullRequestTimeToApproved { average: 0.0 },
+            time_to_merged: PullRequestTimeToMerged { average: 0.0 },
             prs_summaries: vec![],
         };
 
@@ -447,6 +476,7 @@ impl Client {
                                         average: 0.0,
                                     },
                                     time_to_approved: PullRequestTimeToApproved { average: 0.0 },
+                                    time_to_merged: PullRequestTimeToMerged { average: 0.0 },
                                     prs_summaries: vec![],
                                 });
 
