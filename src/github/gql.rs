@@ -1,2 +1,2 @@
-pub mod query;
-pub mod scaler;
+pub(super) mod query;
+pub(super) mod scaler;

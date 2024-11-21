@@ -7,6 +7,6 @@ use crate::github::gql::scaler::*;
     schema_path = "src/github/gql/schema.json",
     query_path = "src/github/gql/pull_requests_query.graphql",
     variables_derives = "Clone, Debug, PartialEq",
-    response_derives = "Debug"
+    response_derives = "Debug, Clone"
 )]
 pub struct PullRequestsQuery;
