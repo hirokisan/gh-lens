@@ -29,3 +29,12 @@ impl DateTime {
         duration.num_seconds()
     }
 }
+
+#[cfg(test)]
+pub(crate) mod tests {
+    use super::*;
+
+    pub fn get_dummy_date_time() -> DateTime {
+        DateTime("2024-11-22T12:34:56Z".to_string())
+    }
+}

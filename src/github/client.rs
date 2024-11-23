@@ -2,7 +2,7 @@ use graphql_client::GraphQLQuery;
 
 use crate::github::gql::query::{pull_requests_query, PullRequestsQuery};
 use crate::github::gql::scaler::DateTime;
-use crate::github::pull_requests_summary::{PullRequestSummary, PullRequestsSummary};
+use crate::github::pull_requests_summary::PullRequestsSummary;
 
 use std::collections::HashMap;
 
@@ -10,11 +10,215 @@ pub struct Client {
     inner: octocrab::Octocrab,
 }
 
-struct PullRequests {
-    inner: Vec<PullRequest>,
+pub struct PullRequests {
+    pub inner: Vec<PullRequest>,
 }
 
-struct PullRequest {
+impl PullRequests {
+    fn new() -> Self {
+        Self { inner: Vec::new() }
+    }
+
+    fn add(&mut self, item: PullRequest) {
+        self.inner.push(item);
+    }
+
+    pub fn count(&self) -> i64 {
+        self.inner.len() as i64
+    }
+
+    pub fn count_by(&self, by: &str) -> i64 {
+        self.inner.iter().filter(|pr| pr.author() == by).count() as i64
+    }
+
+    pub fn comments_count(&self) -> i64 {
+        self.inner.iter().map(|pr| pr.comments_count()).sum()
+    }
+
+    pub fn comments_count_by(&self, by: &str) -> i64 {
+        self.inner.iter().map(|pr| pr.comments_count_by(by)).sum()
+    }
+
+    pub fn comments_count_average(&self) -> f64 {
+        if self.count() == 0 {
+            0.0
+        } else {
+            self.comments_count() as f64 / self.count() as f64
+        }
+    }
+
+    pub fn comments_count_average_by(&self, by: &str) -> f64 {
+        if self.count() == 0 {
+            0.0
+        } else {
+            self.comments_count_by(by) as f64 / self.count() as f64
+        }
+    }
+
+    pub fn commits_count(&self) -> i64 {
+        self.inner.iter().map(|pr| pr.commits_count()).sum()
+    }
+
+    pub fn commits_count_by(&self, by: &str) -> i64 {
+        self.inner.iter().map(|pr| pr.commits_count_by(by)).sum()
+    }
+
+    pub fn commits_count_average(&self) -> f64 {
+        if self.count() == 0 {
+            0.0
+        } else {
+            self.commits_count() as f64 / self.count() as f64
+        }
+    }
+
+    pub fn commits_count_average_by(&self, by: &str) -> f64 {
+        if self.count_by(by) == 0 {
+            0.0
+        } else {
+            self.commits_count_by(by) as f64 / self.count_by(by) as f64
+        }
+    }
+
+    pub fn changed_files_count(&self) -> i64 {
+        self.inner.iter().map(|pr| pr.changed_files_count()).sum()
+    }
+
+    pub fn changed_files_count_by(&self, by: &str) -> i64 {
+        self.inner
+            .iter()
+            .map(|pr| pr.changed_files_count_by(by))
+            .sum()
+    }
+
+    pub fn changed_files_count_average(&self) -> f64 {
+        if self.count() == 0 {
+            0.0
+        } else {
+            self.changed_files_count() as f64 / self.count() as f64
+        }
+    }
+
+    pub fn changed_files_count_average_by(&self, by: &str) -> f64 {
+        if self.count_by(by) == 0 {
+            0.0
+        } else {
+            self.changed_files_count_by(by) as f64 / self.count_by(by) as f64
+        }
+    }
+
+    pub fn time_to_first_contacted_average(&self) -> f64 {
+        let mut count = 0;
+        let mut total_seconds = 0;
+        for pr in self.inner.iter() {
+            if pr.first_contacted_at().is_none() {
+                continue;
+            };
+            count += 1;
+            total_seconds += pr
+                .first_contacted_at()
+                .unwrap()
+                .diff_seconds(&pr.created_at());
+        }
+        if count == 0 {
+            0.0
+        } else {
+            total_seconds as f64 / count as f64
+        }
+    }
+
+    pub fn time_to_first_contacted_average_by(&self, by: &str) -> f64 {
+        let mut count = 0;
+        let mut total_seconds = 0;
+        for pr in self.inner.iter() {
+            if pr.first_contacted_at_by(by).is_none() {
+                continue;
+            };
+            count += 1;
+            total_seconds += pr
+                .first_contacted_at_by(by)
+                .unwrap()
+                .diff_seconds(&pr.created_at());
+        }
+        if count == 0 {
+            0.0
+        } else {
+            total_seconds as f64 / count as f64
+        }
+    }
+
+    pub fn time_to_approved_average(&self) -> f64 {
+        let mut count = 0;
+        let mut total_seconds = 0;
+        for pr in self.inner.iter() {
+            if pr.approved_at().is_none() {
+                continue;
+            };
+            count += 1;
+            total_seconds += pr.approved_at().unwrap().diff_seconds(&pr.created_at());
+        }
+        if count == 0 {
+            0.0
+        } else {
+            total_seconds as f64 / count as f64
+        }
+    }
+
+    pub fn time_to_approved_average_by(&self, by: &str) -> f64 {
+        let mut count = 0;
+        let mut total_seconds = 0;
+        for pr in self.inner.iter() {
+            if pr.approved_at_by(by).is_none() {
+                continue;
+            };
+            count += 1;
+            total_seconds += pr
+                .approved_at_by(by)
+                .unwrap()
+                .diff_seconds(&pr.created_at());
+        }
+        if count == 0 {
+            0.0
+        } else {
+            total_seconds as f64 / count as f64
+        }
+    }
+
+    pub fn time_to_merged_average(&self) -> f64 {
+        let mut count = 0;
+        let mut total_seconds = 0;
+        for pr in self.inner.iter() {
+            if pr.merged_at().is_none() {
+                continue;
+            };
+            count += 1;
+            total_seconds += pr.merged_at().unwrap().diff_seconds(&pr.created_at());
+        }
+        if count == 0 {
+            0.0
+        } else {
+            total_seconds as f64 / count as f64
+        }
+    }
+
+    pub fn time_to_merged_average_by(&self, by: &str) -> f64 {
+        let mut count = 0;
+        let mut total_seconds = 0;
+        for pr in self.inner.iter() {
+            if pr.merged_at_by(by).is_none() {
+                continue;
+            };
+            count += 1;
+            total_seconds += pr.merged_at_by(by).unwrap().diff_seconds(&pr.created_at());
+        }
+        if count == 0 {
+            0.0
+        } else {
+            total_seconds as f64 / count as f64
+        }
+    }
+}
+
+pub struct PullRequest {
     inner: pull_requests_query::PullRequestsQuerySearchNodesOnPullRequest,
 }
 
@@ -23,22 +227,22 @@ impl PullRequest {
         Self { inner }
     }
 
-    fn url(&self) -> String {
+    pub fn url(&self) -> String {
         self.inner.url.clone()
     }
 
-    fn author(&self) -> String {
+    pub fn author(&self) -> String {
         match self.inner.author.as_ref() {
             Some(author) => author.login.clone(),
             None => "no-author".to_string(),
         }
     }
 
-    fn comments_count(&self) -> i64 {
+    pub fn comments_count(&self) -> i64 {
         self.inner.total_comments_count.unwrap()
     }
 
-    fn comments_count_by(&self, by: &str) -> i64 {
+    pub fn comments_count_by(&self, by: &str) -> i64 {
         let mut comments_count = 0;
 
         let reviews = self.inner.reviews.as_ref().unwrap().nodes.as_ref();
@@ -76,33 +280,33 @@ impl PullRequest {
         comments_count
     }
 
-    fn commits_count(&self) -> i64 {
+    pub fn commits_count(&self) -> i64 {
         self.inner.commits.total_count
     }
 
-    fn commits_count_by(&self, by: &str) -> i64 {
+    pub fn commits_count_by(&self, by: &str) -> i64 {
         if self.author() != by {
             return 0;
         }
         self.commits_count()
     }
 
-    fn changed_files_count(&self) -> i64 {
+    pub fn changed_files_count(&self) -> i64 {
         self.inner.changed_files
     }
 
-    fn changed_files_count_by(&self, by: &str) -> i64 {
+    pub fn changed_files_count_by(&self, by: &str) -> i64 {
         if self.author() != by {
             return 0;
         }
         self.changed_files_count()
     }
 
-    fn created_at(&self) -> DateTime {
+    pub fn created_at(&self) -> DateTime {
         self.inner.created_at.clone()
     }
 
-    fn first_contacted_at(&self) -> Option<DateTime> {
+    pub fn first_contacted_at(&self) -> Option<DateTime> {
         let reviews = self.inner.reviews.as_ref().unwrap().nodes.as_ref();
         let comments = self.inner.comments.nodes.as_ref();
         let first_review = reviews.unwrap().iter().find(|review| {
@@ -136,7 +340,7 @@ impl PullRequest {
         }
     }
 
-    fn first_contacted_at_by(&self, by: &str) -> Option<DateTime> {
+    pub fn first_contacted_at_by(&self, by: &str) -> Option<DateTime> {
         let reviews = self.inner.reviews.as_ref().unwrap().nodes.as_ref();
         let comments = self.inner.comments.nodes.as_ref();
 
@@ -174,7 +378,7 @@ impl PullRequest {
         }
     }
 
-    fn reviewee_comments_count(&self) -> i64 {
+    pub fn reviewee_comments_count(&self) -> i64 {
         let mut reviewee_comments_count = 0;
 
         let reviews = self.inner.reviews.as_ref().unwrap().nodes.as_ref();
@@ -210,14 +414,14 @@ impl PullRequest {
         reviewee_comments_count
     }
 
-    fn reviewee_comments_count_by(&self, by: &str) -> i64 {
+    pub fn reviewee_comments_count_by(&self, by: &str) -> i64 {
         if self.author() != by {
             return 0;
         }
         self.comments_count_by(by)
     }
 
-    fn reviewer_comments_count(&self) -> i64 {
+    pub fn reviewer_comments_count(&self) -> i64 {
         let mut reviewer_comments_count = 0;
 
         let reviews = self.inner.reviews.as_ref().unwrap().nodes.as_ref();
@@ -258,14 +462,14 @@ impl PullRequest {
         reviewer_comments_count
     }
 
-    fn reviewer_comments_count_by(&self, by: &str) -> i64 {
+    pub fn reviewer_comments_count_by(&self, by: &str) -> i64 {
         if self.author() == by {
             return 0;
         }
         self.comments_count_by(by)
     }
 
-    fn approved_at(&self) -> Option<DateTime> {
+    pub fn approved_at(&self) -> Option<DateTime> {
         let reviews = self.inner.reviews.as_ref().unwrap().nodes.as_ref();
 
         reviews
@@ -278,7 +482,7 @@ impl PullRequest {
             .map(|approved| approved.as_ref().unwrap().created_at.clone())
     }
 
-    fn approved_at_by(&self, by: &str) -> Option<DateTime> {
+    pub fn approved_at_by(&self, by: &str) -> Option<DateTime> {
         let reviews = self.inner.reviews.as_ref().unwrap().nodes.as_ref();
 
         match reviews.as_ref().unwrap().iter().find(|review| {
@@ -294,11 +498,11 @@ impl PullRequest {
         }
     }
 
-    fn merged_at(&self) -> Option<DateTime> {
+    pub fn merged_at(&self) -> Option<DateTime> {
         self.inner.merged_at.clone()
     }
 
-    fn merged_at_by(&self, by: &str) -> Option<DateTime> {
+    pub fn merged_at_by(&self, by: &str) -> Option<DateTime> {
         match self.inner.merged_by.as_ref() {
             Some(merged_by) => match merged_by.login == by {
                 true => self.merged_at(),
@@ -306,16 +510,6 @@ impl PullRequest {
             },
             None => None,
         }
-    }
-}
-
-impl PullRequests {
-    fn new() -> Self {
-        Self { inner: Vec::new() }
-    }
-
-    fn add(&mut self, item: PullRequest) {
-        self.inner.push(item);
     }
 }
 
@@ -386,44 +580,15 @@ impl Client {
         start_date: String,
         end_date: String,
     ) -> Result<PullRequestsSummary, anyhow::Error> {
-        let mut summary = PullRequestsSummary::new(start_date.clone(), end_date.clone());
-
         let pull_requests = self
             .get_pull_requests(&repo, &start_date, &end_date)
             .await?;
 
-        summary.prs_count = pull_requests.inner.len() as i64;
-        for pull_request in pull_requests.inner.iter() {
-            let url = pull_request.url();
-            let author = pull_request.author();
-            let comments_count = pull_request.comments_count();
-            let commits_count = pull_request.commits_count();
-            let changed_files_count = pull_request.changed_files_count();
-            let created_at = pull_request.created_at();
-            let first_contacted_at = pull_request.first_contacted_at();
-            let reviewee_comments_count = pull_request.reviewee_comments_count();
-            let reviewer_comments_count = pull_request.reviewer_comments_count();
-            let approved_at = pull_request.approved_at();
-            let merged_at = pull_request.merged_at();
-
-            summary.prs_summaries.push(PullRequestSummary {
-                url,
-                author,
-                comments_count,
-                reviewee_comments_count,
-                reviewer_comments_count,
-                commits_count,
-                changed_files_count,
-                created_at,
-                first_contacted_at,
-                approved_at,
-                merged_at,
-            })
-        }
-
-        summary.aggregate_summary();
-
-        Ok(summary)
+        Ok(PullRequestsSummary::new(
+            start_date.clone(),
+            end_date.clone(),
+            &pull_requests,
+        ))
     }
 
     pub async fn get_pull_requests_summary_on_individuals(
@@ -433,57 +598,21 @@ impl Client {
         end_date: String,
         individuals: Vec<String>,
     ) -> Result<HashMap<String, PullRequestsSummary>, anyhow::Error> {
-        let mut summaries: HashMap<String, PullRequestsSummary> = HashMap::new();
-
         let pull_requests = self
             .get_pull_requests(&repo, &start_date, &end_date)
             .await?;
 
+        let mut summaries: HashMap<String, PullRequestsSummary> = HashMap::new();
+
         for individual in individuals.iter() {
-            for pull_request in pull_requests.inner.iter() {
-                let url = pull_request.url();
-                let author = pull_request.author();
-                let comments_count = pull_request.comments_count_by(individual);
-                let commits_count = pull_request.commits_count_by(individual);
-                let changed_files_count = pull_request.changed_files_count_by(individual);
-                let created_at = pull_request.created_at();
-                let first_contacted_at = pull_request.first_contacted_at_by(individual);
-                let reviewee_comments_count = pull_request.reviewee_comments_count_by(individual);
-                let reviewer_comments_count = pull_request.reviewer_comments_count_by(individual);
-                let approved_at = pull_request.approved_at_by(individual);
-                let merged_at = pull_request.merged_at_by(individual);
-
-                summaries
-                    .entry(individual.clone())
-                    .and_modify(|summary| {
-                        if *individual == author {
-                            summary.prs_count += 1
-                        }
-                    })
-                    .or_insert(PullRequestsSummary::new(
-                        start_date.clone(),
-                        end_date.clone(),
-                    ));
-
-                summaries.entry(individual.clone()).and_modify(|summary| {
-                    summary.prs_summaries.push(PullRequestSummary {
-                        url,
-                        author,
-                        comments_count,
-                        reviewee_comments_count,
-                        reviewer_comments_count,
-                        commits_count,
-                        changed_files_count,
-                        created_at,
-                        first_contacted_at,
-                        approved_at,
-                        merged_at,
-                    })
-                });
-                summaries.entry(individual.clone()).and_modify(|summary| {
-                    summary.aggregate_summary();
-                });
-            }
+            summaries
+                .entry(individual.clone())
+                .or_insert(PullRequestsSummary::new_with_by(
+                    start_date.clone(),
+                    end_date.clone(),
+                    &pull_requests,
+                    individual,
+                ));
         }
 
         Ok(summaries)
