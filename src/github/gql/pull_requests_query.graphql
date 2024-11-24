@@ -8,10 +8,8 @@ query PullRequestsQuery($first: Int!, $after: String, $query: String!, $threshol
     nodes {
       __typename
       ... on PullRequest {
-        title
         createdAt
         mergedAt
-        reviewDecision
         url
         totalCommentsCount
         author {
@@ -36,7 +34,6 @@ query PullRequestsQuery($first: Int!, $after: String, $query: String!, $threshol
         }
         changedFiles
         comments(first: $threshold) {
-          totalCount
           nodes {
             author {
               __typename
@@ -46,7 +43,6 @@ query PullRequestsQuery($first: Int!, $after: String, $query: String!, $threshol
           }
         }
         reviews(first: $threshold) {
-          totalCount
           nodes {
             body
             author {
