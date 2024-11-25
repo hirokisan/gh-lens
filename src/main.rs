@@ -1,8 +1,7 @@
 use clap::*;
 
 use crate::daterange::get_monthly_date_ranges;
-use crate::github::client::Client;
-use crate::github::pull_requests_summary::PullRequestsSummary;
+use crate::github::{Client, PullRequestsSummary};
 use anyhow::Result;
 use chrono::NaiveDate;
 use std::collections::HashMap;

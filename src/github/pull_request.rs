@@ -1,5 +1,5 @@
-use crate::github::gql::query::pull_requests_query;
-use crate::github::gql::scaler::DateTime;
+use super::gql::query::pull_requests_query;
+use super::gql::scaler::DateTime;
 
 pub struct PullRequest {
     pub(super) inner: pull_requests_query::PullRequestsQuerySearchNodesOnPullRequest,

@@ -1,10 +1,10 @@
-use crate::github::client::PullRequests;
-use crate::github::gql::scaler::DateTime;
+use super::gql::scaler::DateTime;
+use super::PullRequests;
 
 use serde::Serialize;
 
 #[derive(Debug, Serialize)]
-pub(crate) struct PullRequestsSummary {
+pub struct PullRequestsSummary {
     start_date: String,
     end_date: String,
 

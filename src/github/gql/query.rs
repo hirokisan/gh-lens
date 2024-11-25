@@ -1,6 +1,6 @@
 use graphql_client::GraphQLQuery;
 
-use crate::github::gql::scaler::*;
+use super::scaler::*;
 
 #[derive(GraphQLQuery)]
 #[graphql(
