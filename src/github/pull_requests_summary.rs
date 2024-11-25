@@ -1,13 +1,14 @@
-use crate::github::gql::scaler::DateTime;
+use super::gql::scaler::DateTime;
+use super::PullRequests;
 
 use serde::Serialize;
 
 #[derive(Debug, Serialize)]
-pub(crate) struct PullRequestsSummary {
+pub struct PullRequestsSummary {
     start_date: String,
     end_date: String,
 
-    pub(super) prs_count: i64,
+    prs_count: i64,
     comments_count: PullRequestCommentsCount,
     commits_count: PullRequestCommitsCount,
     changed_files_count: PullRequestChangedFilesCount,
@@ -15,31 +16,31 @@ pub(crate) struct PullRequestsSummary {
     time_to_approved: PullRequestTimeToApproved,
     time_to_merged: PullRequestTimeToMerged,
 
-    pub(super) prs_summaries: Vec<PullRequestSummary>,
+    prs_summaries: Vec<PullRequestSummary>,
 }
 
 #[derive(Debug, Serialize)]
-pub(super) struct PullRequestSummary {
-    pub url: String,
-    pub author: String,
-    pub comments_count: i64,
-    pub reviewee_comments_count: i64,
-    pub reviewer_comments_count: i64,
-    pub commits_count: i64,
-    pub changed_files_count: i64,
-    pub created_at: DateTime,
-    pub first_contacted_at: Option<DateTime>,
-    pub approved_at: Option<DateTime>,
-    pub merged_at: Option<DateTime>,
+struct PullRequestSummary {
+    url: String,
+    author: String,
+    comments_count: i64,
+    reviewee_comments_count: i64,
+    reviewer_comments_count: i64,
+    commits_count: i64,
+    changed_files_count: i64,
+    created_at: DateTime,
+    first_contacted_at: Option<DateTime>,
+    approved_at: Option<DateTime>,
+    merged_at: Option<DateTime>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, PartialEq)]
 struct PullRequestCommentsCount {
     sum: i64,
     average: f64,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, PartialEq)]
 struct PullRequestCommitsCount {
     sum: i64,
     average: f64,
@@ -67,138 +68,124 @@ struct PullRequestTimeToMerged {
 }
 
 impl PullRequestsSummary {
-    pub(super) fn new(start_date: String, end_date: String) -> Self {
-        PullRequestsSummary {
+    pub(super) fn new(start_date: String, end_date: String, pull_requests: &PullRequests) -> Self {
+        let mut summary = PullRequestsSummary {
             start_date,
             end_date,
-            prs_count: 0,
+            prs_count: pull_requests.count(),
             comments_count: PullRequestCommentsCount {
-                sum: 0,
-                average: 0.0,
+                sum: pull_requests.comments_count(),
+                average: pull_requests.comments_count_average(),
             },
             commits_count: PullRequestCommitsCount {
-                sum: 0,
-                average: 0.0,
+                sum: pull_requests.commits_count(),
+                average: pull_requests.commits_count_average(),
             },
             changed_files_count: PullRequestChangedFilesCount {
-                sum: 0,
-                average: 0.0,
+                sum: pull_requests.changed_files_count(),
+                average: pull_requests.changed_files_count_average(),
             },
-            time_to_first_contacted: PullRequestTimeToFirstContacted { average: 0.0 },
-            time_to_approved: PullRequestTimeToApproved { average: 0.0 },
-            time_to_merged: PullRequestTimeToMerged { average: 0.0 },
+            time_to_first_contacted: PullRequestTimeToFirstContacted {
+                average: pull_requests.time_to_first_contacted_average(),
+            },
+            time_to_approved: PullRequestTimeToApproved {
+                average: pull_requests.time_to_approved_average(),
+            },
+            time_to_merged: PullRequestTimeToMerged {
+                average: pull_requests.time_to_merged_average(),
+            },
             prs_summaries: vec![],
+        };
+        for pull_request in pull_requests.inner.iter() {
+            let url = pull_request.url();
+            let author = pull_request.author();
+            let comments_count = pull_request.comments_count();
+            let commits_count = pull_request.commits_count();
+            let changed_files_count = pull_request.changed_files_count();
+            let created_at = pull_request.created_at();
+            let first_contacted_at = pull_request.first_contacted_at();
+            let reviewee_comments_count = pull_request.reviewee_comments_count();
+            let reviewer_comments_count = pull_request.reviewer_comments_count();
+            let approved_at = pull_request.approved_at();
+            let merged_at = pull_request.merged_at();
+
+            summary.prs_summaries.push(PullRequestSummary {
+                url,
+                author,
+                comments_count,
+                reviewee_comments_count,
+                reviewer_comments_count,
+                commits_count,
+                changed_files_count,
+                created_at,
+                first_contacted_at,
+                approved_at,
+                merged_at,
+            })
         }
+        summary
     }
 
-    pub(super) fn aggregate_summary(&mut self) {
-        self.aggregate_comments_count();
-        self.aggregate_commits_count();
-        self.aggregate_changed_files_count();
-        self.aggregate_time_to_first_contacted();
-        self.aggregate_time_to_approved();
-        self.aggregate_time_to_merged();
-    }
-
-    fn aggregate_comments_count(&mut self) {
-        self.comments_count.sum = self
-            .prs_summaries
-            .iter()
-            .map(|summary| summary.comments_count)
-            .sum();
-        self.comments_count.average = if self.prs_summaries.is_empty() {
-            0.0
-        } else {
-            self.comments_count.sum as f64 / self.prs_summaries.len() as f64
+    pub(super) fn new_with_by(
+        start_date: String,
+        end_date: String,
+        pull_requests: &PullRequests,
+        by: &str,
+    ) -> Self {
+        let mut summary = PullRequestsSummary {
+            start_date,
+            end_date,
+            prs_count: pull_requests.count_by(by),
+            comments_count: PullRequestCommentsCount {
+                sum: pull_requests.comments_count_by(by),
+                average: pull_requests.comments_count_average_by(by),
+            },
+            commits_count: PullRequestCommitsCount {
+                sum: pull_requests.commits_count_by(by),
+                average: pull_requests.commits_count_average_by(by),
+            },
+            changed_files_count: PullRequestChangedFilesCount {
+                sum: pull_requests.changed_files_count_by(by),
+                average: pull_requests.changed_files_count_average_by(by),
+            },
+            time_to_first_contacted: PullRequestTimeToFirstContacted {
+                average: pull_requests.time_to_first_contacted_average_by(by),
+            },
+            time_to_approved: PullRequestTimeToApproved {
+                average: pull_requests.time_to_approved_average_by(by),
+            },
+            time_to_merged: PullRequestTimeToMerged {
+                average: pull_requests.time_to_merged_average_by(by),
+            },
+            prs_summaries: vec![],
         };
-    }
+        for pull_request in pull_requests.inner.iter() {
+            let url = pull_request.url();
+            let author = pull_request.author();
+            let comments_count = pull_request.comments_count_by(by);
+            let commits_count = pull_request.commits_count_by(by);
+            let changed_files_count = pull_request.changed_files_count_by(by);
+            let created_at = pull_request.created_at();
+            let first_contacted_at = pull_request.first_contacted_at_by(by);
+            let reviewee_comments_count = pull_request.reviewee_comments_count_by(by);
+            let reviewer_comments_count = pull_request.reviewer_comments_count_by(by);
+            let approved_at = pull_request.approved_at_by(by);
+            let merged_at = pull_request.merged_at_by(by);
 
-    fn aggregate_commits_count(&mut self) {
-        self.commits_count.sum = self
-            .prs_summaries
-            .iter()
-            .map(|summary| summary.commits_count)
-            .sum();
-        self.commits_count.average = if self.prs_count == 0 {
-            0.0
-        } else {
-            self.commits_count.sum as f64 / self.prs_count as f64
-        };
-    }
-
-    fn aggregate_changed_files_count(&mut self) {
-        self.changed_files_count.sum = self
-            .prs_summaries
-            .iter()
-            .map(|summary| summary.changed_files_count)
-            .sum();
-        self.changed_files_count.average = if self.prs_count == 0 {
-            0.0
-        } else {
-            self.changed_files_count.sum as f64 / self.prs_count as f64
-        };
-    }
-
-    fn aggregate_time_to_first_contacted(&mut self) {
-        let mut count = 0;
-        let mut total_seconds = 0;
-        for summary in self.prs_summaries.iter() {
-            if summary.first_contacted_at.is_none() {
-                continue;
-            };
-            count += 1;
-            total_seconds += summary
-                .first_contacted_at
-                .as_ref()
-                .unwrap()
-                .diff_seconds(&summary.created_at);
+            summary.prs_summaries.push(PullRequestSummary {
+                url,
+                author,
+                comments_count,
+                reviewee_comments_count,
+                reviewer_comments_count,
+                commits_count,
+                changed_files_count,
+                created_at,
+                first_contacted_at,
+                approved_at,
+                merged_at,
+            })
         }
-        self.time_to_first_contacted.average = if count == 0 {
-            0.0
-        } else {
-            total_seconds as f64 / count as f64
-        };
-    }
-
-    fn aggregate_time_to_approved(&mut self) {
-        let mut count = 0;
-        let mut total_seconds = 0;
-        for summary in self.prs_summaries.iter() {
-            if summary.approved_at.is_none() {
-                continue;
-            };
-            count += 1;
-            total_seconds += summary
-                .approved_at
-                .as_ref()
-                .unwrap()
-                .diff_seconds(&summary.created_at);
-        }
-        self.time_to_approved.average = if count == 0 {
-            0.0
-        } else {
-            total_seconds as f64 / count as f64
-        };
-    }
-
-    fn aggregate_time_to_merged(&mut self) {
-        let mut count = 0;
-        let mut total_seconds = 0;
-        for summary in self.prs_summaries.iter() {
-            if summary.merged_at.is_none() {
-                continue;
-            };
-            count += 1;
-            total_seconds += summary
-                .merged_at
-                .as_ref()
-                .unwrap()
-                .diff_seconds(&summary.created_at);
-        }
-        self.time_to_merged.average = if count == 0 {
-            0.0
-        } else {
-            total_seconds as f64 / count as f64
-        };
+        summary
     }
 }

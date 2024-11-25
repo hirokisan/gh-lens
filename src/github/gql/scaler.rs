@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 #[allow(clippy::upper_case_acronyms)]
 pub type URI = String;
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialOrd, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialOrd, PartialEq, Default)]
 pub struct DateTime(String);
 
 impl From<&chrono::DateTime<chrono::Utc>> for DateTime {
@@ -27,5 +27,14 @@ impl DateTime {
         let duration = target - compare;
 
         duration.num_seconds()
+    }
+}
+
+#[cfg(test)]
+pub(crate) mod tests {
+    use super::*;
+
+    pub fn get_dummy_date_time() -> DateTime {
+        DateTime("2024-11-22T12:34:56Z".to_string())
     }
 }
