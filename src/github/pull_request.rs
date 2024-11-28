@@ -1,4 +1,4 @@
-use super::gql::query::pull_requests_query;
+use super::gql::pull_requests_query::pull_requests_query;
 use super::gql::scaler::DateTime;
 
 pub struct PullRequest {

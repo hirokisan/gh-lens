@@ -8,16 +8,30 @@ query IssuesQuery($first: Int!, $after: String, $query: String!, $threshold: Int
     nodes {
       __typename
       ... on Issue {
-        title
         url
         createdAt
         closedAt
-        state
+        author {
+            __typename
+            login
+        }
         comments(first: $threshold) {
           nodes {
             author {
               __typename
               login
+            }
+          }
+        }
+        timelineItems(first: 1, itemTypes: CLOSED_EVENT) {
+          nodes {
+            __typename
+            ... on ClosedEvent {
+              actor {
+                __typename
+                login
+              }
+              createdAt
             }
           }
         }
