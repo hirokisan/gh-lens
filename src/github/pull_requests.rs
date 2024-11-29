@@ -211,8 +211,8 @@ impl PullRequests {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::github::gql::query::pull_requests_query;
-    use crate::github::gql::query::tests::*;
+    use crate::github::gql::pull_requests_query::pull_requests_query;
+    use crate::github::gql::pull_requests_query::tests::*;
     use crate::github::gql::scaler::DateTime;
 
     #[test]

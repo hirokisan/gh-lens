@@ -1,0 +1,51 @@
+query IssuesQuery($first: Int!, $after: String, $query: String!, $threshold: Int!) {
+  search( type: ISSUE first: $first after: $after query: $query) {
+    issueCount
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    nodes {
+      __typename
+      ... on Issue {
+        url
+        createdAt
+        closedAt
+        author {
+            __typename
+            login
+        }
+        comments(first: $threshold) {
+          nodes {
+            author {
+              __typename
+              login
+            }
+          }
+        }
+        timelineItems(first: 1, itemTypes: CLOSED_EVENT) {
+          nodes {
+            __typename
+            ... on ClosedEvent {
+              actor {
+                __typename
+                login
+              }
+              createdAt
+            }
+          }
+        }
+        assignees(first: $threshold) {
+          nodes {
+            login
+          }
+        }
+        participants(first: $threshold) {
+          nodes {
+            login
+          }
+        }
+      }
+    }
+  }
+}
