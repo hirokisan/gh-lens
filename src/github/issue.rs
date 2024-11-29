@@ -22,33 +22,30 @@ impl Issue {
     }
 
     pub fn assignees(&self) -> Option<Vec<String>> {
-        let nodes = self.inner.assignees.nodes.as_ref();
-        if nodes.is_none() {
-            return None;
-        }
-        let result: Vec<String> = nodes
-            .unwrap()
+        let result: Vec<String> = self
+            .inner
+            .assignees
+            .nodes
+            .as_ref()?
             .iter()
             .map(|assignee| assignee.as_ref().unwrap().login.clone())
             .collect();
-        if result.len() == 0 {
+        if result.is_empty() {
             return None;
         }
         Some(result)
     }
 
     pub fn participants(&self) -> Option<Vec<String>> {
-        let nodes = self.inner.participants.nodes.as_ref();
-        if nodes.is_none() {
-            return None;
-        }
-
-        let result: Vec<String> = nodes
-            .unwrap()
+        let result: Vec<String> = self
+            .inner
+            .participants
+            .nodes
+            .as_ref()?
             .iter()
             .map(|participant| participant.as_ref().unwrap().login.clone())
             .collect();
-        if result.len() == 0 {
+        if result.is_empty() {
             return None;
         }
         Some(result)
@@ -88,13 +85,8 @@ impl Issue {
     }
 
     pub fn closed_at_by(&self, by: &str) -> Option<DateTime> {
-        let nodes = self.inner.timeline_items.nodes.as_ref();
-        if nodes.is_none() {
-            return None;
-        }
-
         let mut timeline_items = vec![];
-        for item in nodes.unwrap().iter().flatten() {
+        for item in self.inner.timeline_items.nodes.as_ref()?.iter().flatten() {
             match item {
                 issues_query::IssuesQuerySearchNodesOnIssueTimelineItemsNodes::ClosedEvent(
                     event,
@@ -102,17 +94,13 @@ impl Issue {
                 _ => continue,
             }
         }
-        if timeline_items.len() == 0 {
+        if timeline_items.is_empty() {
             return None;
         }
 
         let closed_event = timeline_items.first().unwrap();
 
-        if closed_event.actor.as_ref().is_none() {
-            return None;
-        }
-
-        if closed_event.actor.as_ref().unwrap().login != by {
+        if closed_event.actor.as_ref()?.login != by {
             return None;
         }
 
