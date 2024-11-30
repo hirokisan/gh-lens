@@ -62,7 +62,7 @@ $ gh-lens prs --repo hirokisan/gh-lens --start-date 2024-11-12 --end-date 2024-1
 ```
 
 ```console
-gh-lens issues --repo hirokisan/bybit --start-date 2024-01-01 --end-date 2024-10-31 | jq .
+$ gh-lens issues --repo hirokisan/bybit --start-date 2024-01-01 --end-date 2024-10-31 | jq .
 {
   "start_date": "2024-01-01",
   "end_date": "2024-10-31",
