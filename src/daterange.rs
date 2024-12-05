@@ -9,7 +9,12 @@ pub fn get_monthly_date_ranges(
     if from.day() != 1 {
         return Err(anyhow::anyhow!("from must be 1st day of month"));
     }
-    if to.checked_add_signed(Duration::days(1)).unwrap().day() != 1 {
+    if to
+        .checked_add_signed(Duration::days(1))
+        .ok_or_else(|| anyhow::anyhow!("checked_add_signed"))?
+        .day()
+        != 1
+    {
         return Err(anyhow::anyhow!("to must be last day of month"));
     }
 
@@ -19,14 +24,16 @@ pub fn get_monthly_date_ranges(
     loop {
         let end = start
             .checked_add_months(Months::new(1))
-            .unwrap()
+            .ok_or_else(|| anyhow::anyhow!("checked_add_months"))?
             .pred_opt()
-            .unwrap();
+            .ok_or_else(|| anyhow::anyhow!("pred_opt"))?;
         result.push((start, end));
         if to == end {
             break;
         }
-        start = start.checked_add_months(Months::new(1)).unwrap()
+        start = start
+            .checked_add_months(Months::new(1))
+            .ok_or_else(|| anyhow::anyhow!("checked_add_months"))?
     }
 
     Ok(result)

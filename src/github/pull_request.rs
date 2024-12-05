@@ -24,43 +24,38 @@ impl PullRequest {
     }
 
     pub fn comments_count(&self) -> i64 {
-        self.inner.total_comments_count.unwrap()
+        self.inner.total_comments_count.unwrap_or(0)
     }
 
     pub fn comments_count_by(&self, by: &str) -> i64 {
         let mut comments_count = 0;
 
-        let reviews = self.inner.reviews.as_ref().unwrap().nodes.as_ref();
-        let comments = self.inner.comments.nodes.as_ref();
-
-        comments_count += reviews
-            .as_ref()
-            .unwrap()
-            .iter()
-            .filter(|item| match item {
-                Some(item) => {
-                    if item.author.as_ref().is_none() {
-                        return false;
-                    }
-                    item.author.as_ref().unwrap().login == by
-                }
-                _ => false,
-            })
-            .count() as i64;
-        comments_count += comments
-            .as_ref()
-            .unwrap()
-            .iter()
-            .filter(|item| match item {
-                Some(item) => {
-                    if item.author.as_ref().is_none() {
-                        return false;
-                    }
-                    item.author.as_ref().unwrap().login == by
-                }
-                _ => false,
-            })
-            .count() as i64;
+        if let Some(reviews) = self.inner.reviews.as_ref() {
+            if let Some(nodes) = reviews.nodes.as_ref() {
+                comments_count += nodes
+                    .iter()
+                    .filter(|item| match item {
+                        Some(item) => match item.author.as_ref() {
+                            Some(author) => author.login == by,
+                            None => false,
+                        },
+                        _ => false,
+                    })
+                    .count() as i64;
+            }
+        }
+        if let Some(comments) = self.inner.comments.nodes.as_ref() {
+            comments_count += comments
+                .iter()
+                .filter(|item| match item {
+                    Some(item) => match item.author.as_ref() {
+                        Some(author) => author.login == by,
+                        None => false,
+                    },
+                    _ => false,
+                })
+                .count() as i64;
+        }
 
         comments_count
     }
@@ -92,24 +87,42 @@ impl PullRequest {
     }
 
     pub fn first_contacted_at(&self) -> Option<DateTime> {
-        let reviews = self.inner.reviews.as_ref().unwrap().nodes.as_ref();
-        let comments = self.inner.comments.nodes.as_ref();
-        let first_review = reviews.unwrap().iter().find(|review| {
-            if review.as_ref().unwrap().author.as_ref().is_none() {
-                return false;
+        let first_reviewed_at = match self.inner.reviews.as_ref() {
+            Some(reviews) => match reviews.nodes.as_ref() {
+                Some(nodes) => {
+                    let first_review = nodes.iter().find(|review| match review.as_ref() {
+                        Some(review) => match review.author.as_ref() {
+                            Some(author) => author.login != self.author(),
+                            None => false,
+                        },
+                        None => false,
+                    });
+                    match first_review {
+                        Some(review) => review.as_ref().map(|review| review.created_at.clone()),
+                        None => None,
+                    }
+                }
+                None => None,
+            },
+            None => None,
+        };
+
+        let first_commented_at = match self.inner.comments.nodes.as_ref() {
+            Some(nodes) => {
+                let first_comment = nodes.iter().find(|comment| match comment.as_ref() {
+                    Some(comment) => match comment.author.as_ref() {
+                        Some(author) => author.login != self.author(),
+                        None => false,
+                    },
+                    None => false,
+                });
+                match first_comment {
+                    Some(comment) => comment.as_ref().map(|comment| comment.created_at.clone()),
+                    None => None,
+                }
             }
-            review.as_ref().unwrap().author.as_ref().unwrap().login != self.author()
-        });
-        let first_reviewed_at =
-            first_review.map(|review| review.as_ref().unwrap().created_at.clone());
-        let first_comment = comments.unwrap().iter().find(|comment| {
-            if comment.as_ref().unwrap().author.as_ref().is_none() {
-                return false;
-            }
-            comment.as_ref().unwrap().author.as_ref().unwrap().login != self.author()
-        });
-        let first_commented_at =
-            first_comment.map(|comment| comment.as_ref().unwrap().created_at.clone());
+            None => None,
+        };
 
         match (first_reviewed_at, first_commented_at) {
             (None, Some(commented_at)) => Some(commented_at),
@@ -126,28 +139,42 @@ impl PullRequest {
     }
 
     pub fn first_contacted_at_by(&self, by: &str) -> Option<DateTime> {
-        let reviews = self.inner.reviews.as_ref().unwrap().nodes.as_ref();
-        let comments = self.inner.comments.nodes.as_ref();
+        let first_reviewed_at = match self.inner.reviews.as_ref() {
+            Some(reviews) => match reviews.nodes.as_ref() {
+                Some(nodes) => {
+                    let first_review = nodes.iter().find(|review| match review.as_ref() {
+                        Some(review) => match review.author.as_ref() {
+                            Some(author) => author.login != self.author() && author.login == by,
+                            None => false,
+                        },
+                        None => false,
+                    });
+                    match first_review {
+                        Some(review) => review.as_ref().map(|review| review.created_at.clone()),
+                        None => None,
+                    }
+                }
+                None => None,
+            },
+            None => None,
+        };
 
-        let first_review = reviews.as_ref().unwrap().iter().find(|review| {
-            if review.as_ref().unwrap().author.as_ref().is_none() {
-                return false;
+        let first_commented_at = match self.inner.comments.nodes.as_ref() {
+            Some(comments) => {
+                let first_comment = comments.iter().find(|comment| match comment.as_ref() {
+                    Some(comment) => match comment.author.as_ref() {
+                        Some(author) => author.login != self.author() && author.login == by,
+                        None => false,
+                    },
+                    None => false,
+                });
+                match first_comment {
+                    Some(comment) => comment.as_ref().map(|comment| comment.created_at.clone()),
+                    None => None,
+                }
             }
-            review.as_ref().unwrap().author.as_ref().unwrap().login != self.author()
-                && review.as_ref().unwrap().author.as_ref().unwrap().login == by
-        });
-
-        let first_reviewed_at =
-            first_review.map(|review| review.as_ref().unwrap().created_at.clone());
-        let first_comment = comments.as_ref().unwrap().iter().find(|comment| {
-            if comment.as_ref().unwrap().author.as_ref().is_none() {
-                return false;
-            }
-            comment.as_ref().unwrap().author.as_ref().unwrap().login != self.author()
-                && comment.as_ref().unwrap().author.as_ref().unwrap().login == by
-        });
-        let first_commented_at =
-            first_comment.map(|comment| comment.as_ref().unwrap().created_at.clone());
+            None => None,
+        };
 
         match (first_reviewed_at, first_commented_at) {
             (None, Some(commented_at)) => Some(commented_at),
@@ -166,35 +193,40 @@ impl PullRequest {
     pub fn reviewee_comments_count(&self) -> i64 {
         let mut reviewee_comments_count = 0;
 
-        let reviews = self.inner.reviews.as_ref().unwrap().nodes.as_ref();
-        let comments = self.inner.comments.nodes.as_ref();
+        match self.inner.reviews.as_ref() {
+            Some(reviews) => match reviews.nodes.as_ref() {
+                Some(nodes) => {
+                    reviewee_comments_count += nodes
+                        .iter()
+                        .filter(|node| match node.as_ref() {
+                            Some(node) => match node.author.as_ref() {
+                                Some(author) => author.login == self.author(),
+                                None => false,
+                            },
+                            None => false,
+                        })
+                        .count() as i64
+                }
+                None => (),
+            },
+            None => (),
+        }
 
-        reviewee_comments_count += reviews
-            .unwrap()
-            .iter()
-            .filter(|item| match item {
-                Some(item) => {
-                    if item.author.as_ref().is_none() {
-                        return false;
-                    }
-                    item.author.as_ref().unwrap().login == self.author()
-                }
-                _ => false,
-            })
-            .count() as i64;
-        reviewee_comments_count += comments
-            .unwrap()
-            .iter()
-            .filter(|item| match item {
-                Some(item) => {
-                    if item.author.as_ref().is_none() {
-                        return false;
-                    }
-                    item.author.as_ref().unwrap().login == self.author()
-                }
-                _ => false,
-            })
-            .count() as i64;
+        match self.inner.comments.nodes.as_ref() {
+            Some(nodes) => {
+                reviewee_comments_count += nodes
+                    .iter()
+                    .filter(|node| match node.as_ref() {
+                        Some(node) => match node.author.as_ref() {
+                            Some(author) => author.login == self.author(),
+                            None => false,
+                        },
+                        None => false,
+                    })
+                    .count() as i64
+            }
+            None => (),
+        }
 
         reviewee_comments_count
     }
@@ -209,40 +241,48 @@ impl PullRequest {
     pub fn reviewer_comments_count(&self) -> i64 {
         let mut reviewer_comments_count = 0;
 
-        let reviews = self.inner.reviews.as_ref().unwrap().nodes.as_ref();
-        let comments = self.inner.comments.nodes.as_ref();
+        match self.inner.reviews.as_ref() {
+            Some(reviews) => match reviews.nodes.as_ref() {
+                Some(nodes) => {
+                    reviewer_comments_count += nodes
+                        .iter()
+                        .filter(|node| match node.as_ref() {
+                            Some(node) => {
+                                if node.state
+                                    == pull_requests_query::PullRequestReviewState::APPROVED
+                                    && node.body.is_empty()
+                                {
+                                    return false;
+                                }
+                                match node.author.as_ref() {
+                                    Some(author) => author.login != self.author(),
+                                    None => false,
+                                }
+                            }
+                            None => false,
+                        })
+                        .count() as i64
+                }
+                None => (),
+            },
+            None => (),
+        }
 
-        reviewer_comments_count += reviews
-            .unwrap()
-            .iter()
-            .filter(|item| match item {
-                Some(item) => {
-                    if item.state == pull_requests_query::PullRequestReviewState::APPROVED
-                        && item.body.is_empty()
-                    {
-                        return false;
-                    }
-                    if item.author.as_ref().is_none() {
-                        return false;
-                    }
-                    item.author.as_ref().unwrap().login != self.author()
-                }
-                _ => false,
-            })
-            .count() as i64;
-        reviewer_comments_count += comments
-            .unwrap()
-            .iter()
-            .filter(|item| match item {
-                Some(item) => {
-                    if item.author.as_ref().is_none() {
-                        return false;
-                    }
-                    item.author.as_ref().unwrap().login != self.author()
-                }
-                _ => false,
-            })
-            .count() as i64;
+        match self.inner.comments.nodes.as_ref() {
+            Some(nodes) => {
+                reviewer_comments_count += nodes
+                    .iter()
+                    .filter(|node| match node.as_ref() {
+                        Some(node) => match node.author.as_ref() {
+                            Some(author) => author.login != self.author(),
+                            None => false,
+                        },
+                        None => false,
+                    })
+                    .count() as i64
+            }
+            None => (),
+        }
 
         reviewer_comments_count
     }
@@ -255,30 +295,57 @@ impl PullRequest {
     }
 
     pub fn approved_at(&self) -> Option<DateTime> {
-        let reviews = self.inner.reviews.as_ref().unwrap().nodes.as_ref();
-
-        reviews
-            .unwrap()
-            .iter()
-            .find(|review| {
-                review.as_ref().unwrap().state
-                    == pull_requests_query::PullRequestReviewState::APPROVED
-            })
-            .map(|approved| approved.as_ref().unwrap().created_at.clone())
+        match self.inner.reviews.as_ref() {
+            Some(reviews) => match reviews.nodes.as_ref() {
+                Some(nodes) => {
+                    let node = nodes.iter().find(|node| match node.as_ref() {
+                        Some(node) => {
+                            node.state == pull_requests_query::PullRequestReviewState::APPROVED
+                        }
+                        None => false,
+                    });
+                    match node.as_ref() {
+                        Some(node) => match node.as_ref() {
+                            Some(node) => Some(node.created_at.clone()),
+                            None => None,
+                        },
+                        None => None,
+                    }
+                }
+                None => None,
+            },
+            None => None,
+        }
     }
 
     pub fn approved_at_by(&self, by: &str) -> Option<DateTime> {
-        let reviews = self.inner.reviews.as_ref().unwrap().nodes.as_ref();
-
-        match reviews.as_ref().unwrap().iter().find(|review| {
-            review.as_ref().unwrap().state == pull_requests_query::PullRequestReviewState::APPROVED
-        }) {
-            Some(approved) => {
-                match approved.as_ref().unwrap().author.as_ref().unwrap().login == by {
-                    true => Some(approved.as_ref().unwrap().created_at.clone()),
-                    false => None,
+        match self.inner.reviews.as_ref() {
+            Some(reviews) => match reviews.nodes.as_ref() {
+                Some(nodes) => {
+                    let approved = nodes.iter().find(|node| match node.as_ref() {
+                        Some(node) => {
+                            node.state == pull_requests_query::PullRequestReviewState::APPROVED
+                        }
+                        None => false,
+                    });
+                    match approved {
+                        Some(approved) => match approved.as_ref() {
+                            Some(approved) => match approved.author.as_ref() {
+                                Some(author) => {
+                                    if author.login == by {
+                                        return Some(approved.created_at.clone());
+                                    }
+                                    None
+                                }
+                                None => None,
+                            },
+                            None => None,
+                        },
+                        None => None,
+                    }
                 }
-            }
+                None => None,
+            },
             None => None,
         }
     }

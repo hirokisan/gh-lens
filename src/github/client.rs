@@ -51,17 +51,25 @@ impl Client {
 
             match response {
                 Ok(res) => {
-                    let prs = &res.data.as_ref().unwrap().search;
+                    let prs = match res.data.as_ref() {
+                        Some(data) => &data.search,
+                        None => break,
+                    };
                     let has_next_page = prs.page_info.has_next_page;
                     let end_cursor = prs.page_info.end_cursor.clone();
 
-                    for item in prs.nodes.as_ref().unwrap().iter().flatten() {
-                        match item {
+                    match prs.nodes.as_ref() {
+                        Some(nodes) => {
+                            for node in nodes.iter().flatten() {
+                                match node {
                             pull_requests_query::PullRequestsQuerySearchNodes::PullRequest(pr) => {
                                 result.add(PullRequest::new(pr.clone()))
                             }
                             _ => continue,
                         };
+                            }
+                        }
+                        None => break,
                     }
 
                     if !has_next_page {
@@ -101,17 +109,25 @@ impl Client {
 
             match response {
                 Ok(res) => {
-                    let issues = &res.data.as_ref().unwrap().search;
+                    let issues = match res.data.as_ref() {
+                        Some(data) => &data.search,
+                        None => break,
+                    };
                     let has_next_page = issues.page_info.has_next_page;
                     let end_cursor = issues.page_info.end_cursor.clone();
 
-                    for item in issues.nodes.as_ref().unwrap().iter().flatten() {
-                        match item {
-                            issues_query::IssuesQuerySearchNodes::Issue(issue) => {
-                                result.add(Issue::new(issue.clone()))
+                    match issues.nodes.as_ref() {
+                        Some(nodes) => {
+                            for node in nodes.iter().flatten() {
+                                match node {
+                                    issues_query::IssuesQuerySearchNodes::Issue(issue) => {
+                                        result.add(Issue::new(issue.clone()))
+                                    }
+                                    _ => continue,
+                                };
                             }
-                            _ => continue,
-                        };
+                        }
+                        None => break,
                     }
 
                     if !has_next_page {

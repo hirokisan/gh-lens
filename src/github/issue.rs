@@ -28,7 +28,7 @@ impl Issue {
             .nodes
             .as_ref()?
             .iter()
-            .map(|assignee| assignee.as_ref().unwrap().login.clone())
+            .filter_map(|assignee| assignee.as_ref().map(|assignee| assignee.login.clone()))
             .collect();
         if result.is_empty() {
             return None;
@@ -43,7 +43,11 @@ impl Issue {
             .nodes
             .as_ref()?
             .iter()
-            .map(|participant| participant.as_ref().unwrap().login.clone())
+            .filter_map(|participant| {
+                participant
+                    .as_ref()
+                    .map(|participant| participant.login.clone())
+            })
             .collect();
         if result.is_empty() {
             return None;
@@ -56,28 +60,26 @@ impl Issue {
     }
 
     pub fn comments_count(&self) -> i64 {
-        let comments = self.inner.comments.nodes.as_ref();
-
-        comments.unwrap().len() as i64
+        match self.inner.comments.nodes.as_ref() {
+            Some(nodes) => nodes.len() as i64,
+            None => 0,
+        }
     }
 
     pub fn comments_count_by(&self, by: &str) -> i64 {
-        let comments = self.inner.comments.nodes.as_ref();
-
-        comments
-            .as_ref()
-            .unwrap()
-            .iter()
-            .filter(|item| match item {
-                Some(item) => {
-                    if item.author.as_ref().is_none() {
-                        return false;
-                    }
-                    item.author.as_ref().unwrap().login == by
-                }
-                _ => false,
-            })
-            .count() as i64
+        match self.inner.comments.nodes.as_ref() {
+            Some(nodes) => nodes
+                .iter()
+                .filter(|item| match item {
+                    Some(item) => match item.author.as_ref() {
+                        Some(author) => author.login == by,
+                        None => false,
+                    },
+                    _ => false,
+                })
+                .count() as i64,
+            None => 0,
+        }
     }
 
     pub fn closed_at(&self) -> Option<DateTime> {
@@ -98,7 +100,7 @@ impl Issue {
             return None;
         }
 
-        let closed_event = timeline_items.first().unwrap();
+        let closed_event = timeline_items.first()?;
 
         if closed_event.actor.as_ref()?.login != by {
             return None;

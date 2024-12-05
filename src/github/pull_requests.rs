@@ -100,14 +100,13 @@ impl PullRequests {
         let mut count = 0;
         let mut total_seconds = 0;
         for pr in self.inner.iter() {
-            if pr.first_contacted_at().is_none() {
-                continue;
-            };
-            count += 1;
-            total_seconds += pr
-                .first_contacted_at()
-                .unwrap()
-                .diff_seconds(&pr.created_at());
+            match pr.first_contacted_at() {
+                Some(first_contacted_at) => {
+                    count += 1;
+                    total_seconds += first_contacted_at.diff_seconds(&pr.created_at());
+                }
+                None => continue,
+            }
         }
         if count == 0 {
             0.0
@@ -120,14 +119,13 @@ impl PullRequests {
         let mut count = 0;
         let mut total_seconds = 0;
         for pr in self.inner.iter() {
-            if pr.first_contacted_at_by(by).is_none() {
-                continue;
-            };
-            count += 1;
-            total_seconds += pr
-                .first_contacted_at_by(by)
-                .unwrap()
-                .diff_seconds(&pr.created_at());
+            match pr.first_contacted_at_by(by) {
+                Some(first_contacted_at_by) => {
+                    count += 1;
+                    total_seconds += first_contacted_at_by.diff_seconds(&pr.created_at());
+                }
+                None => continue,
+            }
         }
         if count == 0 {
             0.0
@@ -140,11 +138,13 @@ impl PullRequests {
         let mut count = 0;
         let mut total_seconds = 0;
         for pr in self.inner.iter() {
-            if pr.approved_at().is_none() {
-                continue;
-            };
-            count += 1;
-            total_seconds += pr.approved_at().unwrap().diff_seconds(&pr.created_at());
+            match pr.approved_at() {
+                Some(approved_at) => {
+                    count += 1;
+                    total_seconds += approved_at.diff_seconds(&pr.created_at());
+                }
+                None => continue,
+            }
         }
         if count == 0 {
             0.0
@@ -157,14 +157,13 @@ impl PullRequests {
         let mut count = 0;
         let mut total_seconds = 0;
         for pr in self.inner.iter() {
-            if pr.approved_at_by(by).is_none() {
-                continue;
-            };
-            count += 1;
-            total_seconds += pr
-                .approved_at_by(by)
-                .unwrap()
-                .diff_seconds(&pr.created_at());
+            match pr.approved_at_by(by) {
+                Some(approved_at_by) => {
+                    count += 1;
+                    total_seconds += approved_at_by.diff_seconds(&pr.created_at());
+                }
+                None => continue,
+            }
         }
         if count == 0 {
             0.0
@@ -177,11 +176,13 @@ impl PullRequests {
         let mut count = 0;
         let mut total_seconds = 0;
         for pr in self.inner.iter() {
-            if pr.merged_at().is_none() {
-                continue;
-            };
-            count += 1;
-            total_seconds += pr.merged_at().unwrap().diff_seconds(&pr.created_at());
+            match pr.merged_at() {
+                Some(merged_at) => {
+                    count += 1;
+                    total_seconds += merged_at.diff_seconds(&pr.created_at());
+                }
+                None => continue,
+            }
         }
         if count == 0 {
             0.0
@@ -194,11 +195,13 @@ impl PullRequests {
         let mut count = 0;
         let mut total_seconds = 0;
         for pr in self.inner.iter() {
-            if pr.merged_at_by(by).is_none() {
-                continue;
-            };
-            count += 1;
-            total_seconds += pr.merged_at_by(by).unwrap().diff_seconds(&pr.created_at());
+            match pr.merged_at_by(by) {
+                Some(merged_at_by) => {
+                    count += 1;
+                    total_seconds += merged_at_by.diff_seconds(&pr.created_at());
+                }
+                None => continue,
+            }
         }
         if count == 0 {
             0.0
