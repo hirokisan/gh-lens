@@ -77,11 +77,13 @@ impl Issues {
         let mut count = 0;
         let mut total_seconds = 0;
         for issue in self.inner.iter() {
-            if issue.closed_at().is_none() {
-                continue;
-            };
-            count += 1;
-            total_seconds += issue.closed_at().unwrap().diff_seconds(&issue.created_at());
+            match issue.closed_at() {
+                Some(closed_at) => {
+                    count += 1;
+                    total_seconds += closed_at.diff_seconds(&issue.created_at());
+                }
+                None => continue,
+            }
         }
         if count == 0 {
             0.0
@@ -94,14 +96,13 @@ impl Issues {
         let mut count = 0;
         let mut total_seconds = 0;
         for issue in self.inner.iter() {
-            if issue.closed_at_by(by).is_none() {
-                continue;
-            };
-            count += 1;
-            total_seconds += issue
-                .closed_at_by(by)
-                .unwrap()
-                .diff_seconds(&issue.created_at());
+            match issue.closed_at_by(by) {
+                Some(closed_at_by) => {
+                    count += 1;
+                    total_seconds += closed_at_by.diff_seconds(&issue.created_at());
+                }
+                None => continue,
+            }
         }
         if count == 0 {
             0.0
