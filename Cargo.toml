@@ -10,7 +10,7 @@ categories = ["command-line-utilities"]
 homepage = "https://github.com/hirokisan/gh-lens"
 repository = "https://github.com/hirokisan/gh-lens"
 readme = "README.md"
-rust-version = "1.79.0"
+rust-version = "1.89.0"
 
 [[bin]]
 name = "gh-lens"
