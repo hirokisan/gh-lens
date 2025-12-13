@@ -30,7 +30,7 @@ impl Issues {
             .filter(|issue| {
                 issue
                     .assignees()
-                    .map_or(false, |assignees| !assignees.is_empty())
+                    .is_some_and(|assignees| !assignees.is_empty())
             })
             .count() as i64
     }
@@ -41,7 +41,7 @@ impl Issues {
             .filter(|issue| {
                 issue
                     .assignees()
-                    .map_or(false, |assignees| assignees.contains(&by.to_string()))
+                    .is_some_and(|assignees| assignees.contains(&by.to_string()))
             })
             .count() as i64
     }
